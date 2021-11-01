@@ -21,21 +21,15 @@
    the website www.fyiReporting.com.
 */
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
 using System.Windows.Forms;
 using System.Text;
 using System.Xml;
 using System.IO;
 using System.Threading;
-using System.Reflection;
-using System.CodeDom;
 using System.CodeDom.Compiler;
 using Microsoft.VisualBasic;
-using fyiReporting.RdlDesign.Resources;
+using Strings = fyiReporting.RdlDesign.Resources.Strings;
 
 namespace fyiReporting.RdlDesign
 {

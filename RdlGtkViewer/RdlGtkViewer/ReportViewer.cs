@@ -1,4 +1,4 @@
-// 
+﻿// 
 //  ReportViewer.cs
 //  
 //  Author:
@@ -28,6 +28,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using fyiReporting.RDL;
 using Gtk;
 using Strings = RdlEngine.Resources.Strings;
@@ -725,11 +726,35 @@ namespace fyiReporting.RdlGtkViewer
 		            printing.DrawPage += HandlePrintDrawPage;
 		            printing.EndPrint += HandlePrintEndPrint;
 
-		            printing.Run(PrintOperationAction.PrintDialog, null);
-	            }
-	            else
+					var path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\PrintLog.log";
+
+					var file = File.AppendText(path);
+					file.WriteLine($"Unit: {printing.Unit}, UseFullPage {printing.UseFullPage}, Orientation {printing.DefaultPageSetup?.Orientation}");
+					file.WriteLine("Data:");
+
+					foreach(var item in printing.Data)
+					{
+						file.WriteLine(JsonSerializer.Serialize(item));
+					}
+
+					file.WriteLine("Data end");
+
+					file.WriteLine($"Printing settings: \n{JsonSerializer.Serialize(printing.PrintSettings)}");
+					file.Close();
+
+					var result = printing.Run(PrintOperationAction.PrintDialog, null);
+
+					file = File.AppendText(path);
+					file.WriteLine($"Result {result}");
+					file.Close();
+				}
+				else
 	            {
-		            customPrintAction.Invoke(pages);
+					var file = File.CreateText(Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\PrintLog.log");
+					file.WriteLine("UsedCustomPrintFunc");
+					file.Close();
+
+					customPrintAction.Invoke(pages);
 	            }
             }
         }
@@ -757,6 +782,15 @@ namespace fyiReporting.RdlGtkViewer
 
 		void HandlePrintEndPrint (object o, EndPrintArgs args)
 		{
+			var path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\PrintLog.log";
+
+			var file = File.AppendText(path);
+
+			file.WriteLine("Printing ended");
+			file.WriteLine(JsonSerializer.Serialize(args.RetVal));
+
+			file.Close();
+
 			ReportPrinted?.Invoke(this, EventArgs.Empty);
             printing.BeginPrint -= HandlePrintBeginPrint;
             printing.DrawPage -= HandlePrintDrawPage;

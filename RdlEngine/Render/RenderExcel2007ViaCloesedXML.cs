@@ -31,7 +31,7 @@ namespace fyiReporting.RDL
     ///<summary>
     /// Renders a report to Excel 2007.   This handles some page formating but does not do true page formatting.
     ///</summary>
-    internal class RenderExcel2007 : IPresent
+    internal class RenderExcel2007ViaCloesedXML : IPresent
     {
         Report report;                   // report
         IStreamGen _sg;             // stream generater
@@ -40,9 +40,9 @@ namespace fyiReporting.RDL
         XLWorkbook workbook;
         IXLWorksheet worksheet;
 
-        double k = 4.8;
+        double k = 5.637142013;
 
-        public RenderExcel2007(Report rep, IStreamGen sg)
+        public RenderExcel2007ViaCloesedXML(Report rep, IStreamGen sg)
         {
             report = rep;
             _sg = sg;
@@ -238,7 +238,24 @@ namespace fyiReporting.RDL
             }
             else if (DateTime.TryParse(value, out DateTime dtVal))
             {
-                cell.Value = dtVal;
+                bool hasLetters = false;
+                for (int i = 0; i < value.Length; i++)
+                {
+                    if (char.IsLetter(value[i]))
+                    {
+                        hasLetters = true;
+                        break;
+                    }
+                }
+
+                if (hasLetters)
+                {
+                    cell.Value = value;
+                }
+                else
+                {
+                    cell.Value = dtVal;
+                }
             }
             else
             {

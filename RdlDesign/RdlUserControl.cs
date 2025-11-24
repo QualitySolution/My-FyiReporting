@@ -1228,7 +1228,7 @@ namespace fyiReporting.RdlDesign
 
         private void excelToolStripButton2_Click(object sender, EventArgs e)
         {
-            Export(fyiReporting.RDL.OutputPresentationType.Excel2007);
+            Export(fyiReporting.RDL.OutputPresentationType.Excel2007NPOI);
         }
 
         private void XmlToolStripButton2_Click(object sender, EventArgs e)

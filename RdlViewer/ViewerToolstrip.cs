@@ -141,7 +141,7 @@ namespace fyiReporting.RdlViewer
                     type = fyiReporting.RDL.OutputPresentationType.MHTML;
                     break;
                 case "xlsx":
-                    type = dlg.FilterIndex == 7 ? OutputPresentationType.ExcelTableOnly : OutputPresentationType.Excel2007;
+                    type = dlg.FilterIndex == 7 ? OutputPresentationType.ExcelTableOnly : OutputPresentationType.Excel2007NPOI;
                     break;
                 case "tif":
                     type = fyiReporting.RDL.OutputPresentationType.TIF;

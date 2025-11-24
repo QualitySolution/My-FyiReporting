@@ -926,8 +926,11 @@ namespace fyiReporting.RdlViewer
                     case OutputPresentationType.ExcelTableOnly:
                         _Report.RunRender(sg, OutputPresentationType.ExcelTableOnly);
                         break;
-                    case OutputPresentationType.Excel2007:
-                        _Report.RunRender(sg, OutputPresentationType.Excel2007);
+                    case OutputPresentationType.Excel2007CloesedXML:
+                        _Report.RunRender(sg, OutputPresentationType.Excel2007CloesedXML);
+                        break;
+                    case OutputPresentationType.Excel2007NPOI:
+                        _Report.RunRender(sg, OutputPresentationType.Excel2007NPOI);
                         break;
                     case OutputPresentationType.XML:
                         _Report.RunRender(sg, OutputPresentationType.XML);

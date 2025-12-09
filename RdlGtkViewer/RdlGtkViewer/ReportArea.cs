@@ -28,6 +28,7 @@ using fyiReporting.RDL;
 using System.Collections.Generic;
 using Gtk;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace fyiReporting.RdlGtkViewer
 {
@@ -83,10 +84,10 @@ namespace fyiReporting.RdlGtkViewer
 				}
 
 				string text;
-				if(hitAreaItem.pi is PageText) {
-					text = (hitAreaItem.pi as PageText).Text;
-				} else if(hitAreaItem.pi is PageTextHtml) {
-					text = (hitAreaItem.pi as PageTextHtml).Text;
+				if(hitAreaItem.pi is PageText pageText) {
+					text = pageText.Text;
+				} else if(hitAreaItem.pi is PageTextHtml html) {
+					text = html.Text;
 				} else {
 					return false;
 				}
@@ -97,6 +98,12 @@ namespace fyiReporting.RdlGtkViewer
 				MenuItem menuItem = new MenuItem("Копировать");
 				menuItem.Activated += (sender, e) => {
 					Gtk.Clipboard clipboard = Gtk.Clipboard.Get(Gdk.Atom.Intern("CLIPBOARD", false));
+
+					if(hitAreaItem.pi.SI._Format == "#,##0.00")
+					{
+						text = Regex.Replace(text, @"\s?", string.Empty);
+					}
+					
 					clipboard.Text = text;
 					selectedItem = null;
 					QueueDraw();

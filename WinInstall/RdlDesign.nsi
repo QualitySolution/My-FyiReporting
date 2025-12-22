@@ -1,7 +1,7 @@
 Unicode true
 ;--------------------------------
-!define PRODUCT_VERSION "1.2"
-!define NET_VERSION "4.6.1"
+!define PRODUCT_VERSION "1.3"
+!define NET_VERSION "4.6.2"
 !define EXE_NAME "RdlDesigner"
 !define PRODUCT_NAME "QS: RdlDesigner"
 !define SHORTCUT_NAME "QS RdlDesigner"
@@ -73,6 +73,7 @@ Section "${PRODUCT_NAME}" SecProgram
   CreateDirectory "$SMPROGRAMS\${MENU_DIR_NAME}"
   CreateShortCut "$SMPROGRAMS\${MENU_DIR_NAME}\Удаление.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
   CreateShortCut "$SMPROGRAMS\${MENU_DIR_NAME}\${SHORTCUT_NAME}.lnk" "$INSTDIR\${EXE_NAME}.exe" "" "$INSTDIR\${EXE_NAME}.exe" 0
+  CreateShortCut "$SMPROGRAMS\${MENU_DIR_NAME}\QS RdlReader.lnk" "$INSTDIR\RdlReader.exe" "" "$INSTDIR\RdlReader.exe" 0
 
 SectionEnd
 

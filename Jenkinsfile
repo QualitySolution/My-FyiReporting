@@ -36,7 +36,7 @@ node {
          }
       }
       stage('Publish'){
-         sh 'scp WinInstall/RdlDesigner-*.exe a218160_qso@a218160.ftp.mchost.ru:subdomains/files/httpdocs/RdlDesigner/'
+         sh 'scp WinInstall/RdlDesigner-*.exe root@odysseus.srv.qsolution.ru:/var/www/files/RdlDesigner/'
       }
    }
 }

@@ -494,8 +494,15 @@ namespace fyiReporting.RdlGtkViewer
                 fc.AddFilter(excel2007Data);
             }
             
-            if(!restrictedOutputPresentationTypes.Contains(OutputPresentationType.Excel2007)) {
-                Gtk.FileFilter excel2007 = new Gtk.FileFilter { Name = "Excel с форматированием (Долго)" };
+            if(!restrictedOutputPresentationTypes.Contains(OutputPresentationType.Excel2007ClosedXML)) {
+	            Gtk.FileFilter excel2007 = new Gtk.FileFilter { Name = "Excel с форматированием (ClosedXML) (Быстро)" };
+	            var extensionXLSX = ".xlsx";
+	            excel2007.AddPattern($"*{extensionXLSX}");
+	            fc.AddFilter(excel2007);
+            }
+            
+            if(!restrictedOutputPresentationTypes.Contains(OutputPresentationType.Excel2007NPOI)) {
+                Gtk.FileFilter excel2007 = new Gtk.FileFilter { Name = "Excel с форматированием (NPOI) (Долго)" };
                 var extensionXLSX = ".xlsx";
                 excel2007.AddPattern($"*{extensionXLSX}");
                 fc.AddFilter(excel2007);
@@ -583,8 +590,15 @@ namespace fyiReporting.RdlGtkViewer
                             searchPattern = "*.xlsx";
                         }
                     }
-					else if(fc.Filter.Name == "Excel с форматированием (Долго)") {
-						exportType = OutputPresentationType.Excel2007;
+                    else if(fc.Filter.Name == "Excel с форматированием (ClosedXML) (Быстро)") {
+	                    exportType = OutputPresentationType.Excel2007ClosedXML;
+	                    if(filename.ToLower().Trim().EndsWith(".xlsx") == false) {
+		                    filename = filename + ".xlsx";
+		                    searchPattern = "*.xlsx";
+	                    }
+                    }
+					else if(fc.Filter.Name == "Excel с форматированием (NPOI) (Долго)") {
+						exportType = OutputPresentationType.Excel2007NPOI;
 						if(filename.ToLower().Trim().EndsWith(".xlsx") == false) {
 							filename = filename + ".xlsx";
                             searchPattern = "*.xlsx";

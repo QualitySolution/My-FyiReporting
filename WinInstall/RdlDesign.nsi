@@ -73,6 +73,7 @@ Section "${PRODUCT_NAME}" SecProgram
   CreateDirectory "$SMPROGRAMS\${MENU_DIR_NAME}"
   CreateShortCut "$SMPROGRAMS\${MENU_DIR_NAME}\Удаление.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
   CreateShortCut "$SMPROGRAMS\${MENU_DIR_NAME}\${SHORTCUT_NAME}.lnk" "$INSTDIR\${EXE_NAME}.exe" "" "$INSTDIR\${EXE_NAME}.exe" 0
+  CreateShortCut "$SMPROGRAMS\${MENU_DIR_NAME}\QS RdlReader.lnk" "$INSTDIR\RdlReader.exe" "" "$INSTDIR\RdlReader.exe" 0
 
 SectionEnd
 

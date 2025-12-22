@@ -47,7 +47,7 @@ namespace fyiReporting.RDL
         RTF,
         Word,
         ExcelTableOnly,
-        Excel2007CloesedXML,
+        Excel2007ClosedXML,
         Excel2007NPOI,
         TIF,
         TIFBW,                   // black and white tif

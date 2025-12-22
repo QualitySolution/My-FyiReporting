@@ -222,7 +222,7 @@ namespace fyiReporting.RDL
                     ip = new RenderExcel(this, sg);
                     _Report.Run(ip);
                     break;
-				case OutputPresentationType.Excel2007CloesedXML:
+				case OutputPresentationType.Excel2007ClosedXML:
 					ip = new RenderExcel2007ViaCloesedXML(this, sg);
 					_Report.Run(ip);
 					break;

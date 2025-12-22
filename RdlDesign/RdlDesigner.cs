@@ -3810,7 +3810,7 @@ namespace fyiReporting.RdlDesign
             if (mc == null)
                 return;
 
-            mc.Export(fyiReporting.RDL.OutputPresentationType.Excel2007CloesedXML);
+            mc.Export(fyiReporting.RDL.OutputPresentationType.Excel2007ClosedXML);
             return;
         }
     }

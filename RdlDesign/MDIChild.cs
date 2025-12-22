@@ -272,7 +272,7 @@ namespace fyiReporting.RdlDesign
                 case OutputPresentationType.Excel2007NPOI:
                     sfd.Filter = Strings.MDIChild_Export_Excel;
                     break;
-                case OutputPresentationType.Excel2007CloesedXML:
+                case OutputPresentationType.Excel2007ClosedXML:
                     sfd.Filter = Strings.MDIChild_Export_Excel;
                     break;
                 case OutputPresentationType.HTML:

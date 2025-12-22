@@ -384,7 +384,7 @@ namespace fyiReporting.RdlCmd
                         report.RunRender(sg, OutputPresentationType.ExcelTableOnly);
                         break;
                     case "xlsx":
-                        report.RunRender(sg, OutputPresentationType.Excel2007CloesedXML);
+                        report.RunRender(sg, OutputPresentationType.Excel2007ClosedXML);
                         break;
                     case "rtf":
                         report.RunRender(sg, OutputPresentationType.RTF);

@@ -125,7 +125,7 @@ namespace fyiReporting.RdlAsp
                         return "csv";
                     case OutputPresentationType.ExcelTableOnly:
                     case OutputPresentationType.Excel2007NPOI:
-                    case OutputPresentationType.Excel2007CloesedXML:    
+                    case OutputPresentationType.Excel2007ClosedXML:    
                         return "xlsx";
                     case OutputPresentationType.RTF:
                         return "rtf";

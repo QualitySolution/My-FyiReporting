@@ -1,7 +1,7 @@
 Unicode true
 ;--------------------------------
-!define PRODUCT_VERSION "1.2"
-!define NET_VERSION "4.6.1"
+!define PRODUCT_VERSION "1.3"
+!define NET_VERSION "4.6.2"
 !define EXE_NAME "RdlDesigner"
 !define PRODUCT_NAME "QS: RdlDesigner"
 !define SHORTCUT_NAME "QS RdlDesigner"

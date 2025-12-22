@@ -269,7 +269,10 @@ namespace fyiReporting.RdlDesign
                     sfd.Filter = Strings.MDIChild_Export_DOC;
                     break;
                 case OutputPresentationType.ExcelTableOnly:
-                case OutputPresentationType.Excel2007:
+                case OutputPresentationType.Excel2007NPOI:
+                    sfd.Filter = Strings.MDIChild_Export_Excel;
+                    break;
+                case OutputPresentationType.Excel2007CloesedXML:
                     sfd.Filter = Strings.MDIChild_Export_Excel;
                     break;
                 case OutputPresentationType.HTML:

@@ -523,7 +523,7 @@ namespace fyiReporting.RdlReader
                     type = OutputPresentationType.MHTML;
                     break;
                 case "xlsx":
-                    type = sfd.FilterIndex == 7 ? OutputPresentationType.ExcelTableOnly : OutputPresentationType.Excel2007;
+                    type = sfd.FilterIndex == 7 ? OutputPresentationType.ExcelTableOnly : OutputPresentationType.Excel2007NPOI;
                     break;
                 case "tif":
                 case "tiff":

@@ -222,8 +222,12 @@ namespace fyiReporting.RDL
                     ip = new RenderExcel(this, sg);
                     _Report.Run(ip);
                     break;
-				case OutputPresentationType.Excel2007:
-					ip = new RenderExcel2007(this, sg);
+				case OutputPresentationType.Excel2007CloesedXML:
+					ip = new RenderExcel2007ViaCloesedXML(this, sg);
+					_Report.Run(ip);
+					break;
+				case OutputPresentationType.Excel2007NPOI:
+					ip = new RenderExcel2007ViaNPOI(this, sg);
 					_Report.Run(ip);
 					break;
                 case OutputPresentationType.ASPHTML:

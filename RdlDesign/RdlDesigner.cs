@@ -3794,13 +3794,23 @@ namespace fyiReporting.RdlDesign
             return;
         }
 
-        private void Excel2007ToolStripMenuItem_Click(object sender, EventArgs e)
+        private void Excel2007NPOIToolStripMenuItem_Click(object sender, EventArgs e)
         {
             MDIChild mc = this.ActiveMdiChild as MDIChild;
             if (mc == null)
                 return;
 
-            mc.Export(fyiReporting.RDL.OutputPresentationType.Excel2007);
+            mc.Export(fyiReporting.RDL.OutputPresentationType.Excel2007NPOI);
+            return;
+        }
+
+        private void Excel2007CloesedXMLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            MDIChild mc = this.ActiveMdiChild as MDIChild;
+            if (mc == null)
+                return;
+
+            mc.Export(fyiReporting.RDL.OutputPresentationType.Excel2007CloesedXML);
             return;
         }
     }

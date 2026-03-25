@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using fyiReporting.RDL;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Xml;
 
 namespace fyiReporting.CRI
@@ -39,27 +41,40 @@ namespace fyiReporting.CRI
 
         public void DrawImage(ref Bitmap bm, string code39)
         {
-#if NETSTANDARD2_0
-            var writer = new ZXing.BarcodeWriter<Bitmap>();
-#else
-			var writer = new ZXing.BarcodeWriter();
-#endif
-			writer.Format = ZXing.BarcodeFormat.CODE_39;
+            int barHeight;
+            int barWidth;
+            using (var g = Graphics.FromImage(bm))
+            {
+                float mag = PixelConversions.GetMagnification(g, bm.Width, bm.Height,
+                    OptimalHeight, OptimalWidth);
 
-            Graphics g = null;
-            g = Graphics.FromImage(bm);
-            float mag = PixelConversions.GetMagnification(g, bm.Width, bm.Height, 
-                OptimalHeight, OptimalWidth);
+                barHeight = PixelConversions.PixelXFromMm(g, OptimalHeight * mag);
+                barWidth = PixelConversions.PixelYFromMm(g, OptimalWidth * mag);
+            }
 
-            int barHeight = PixelConversions.PixelXFromMm(g, OptimalHeight * mag);
-            int barWidth = PixelConversions.PixelYFromMm(g, OptimalWidth * mag);
-
+            var writer = new ZXing.BarcodeWriterPixelData
+            {
+                Format = ZXing.BarcodeFormat.CODE_39
+            };
 
 			writer.Options.Height = barHeight;
 			writer.Options.Width = barWidth;
 
+            var pixelData = writer.Write(code39);
+            var renderedBitmap = new Bitmap(pixelData.Width, pixelData.Height, PixelFormat.Format32bppArgb);
+            var rect = new Rectangle(0, 0, pixelData.Width, pixelData.Height);
+            var bmpData = renderedBitmap.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
 
-			bm = writer.Write(code39);
+            try
+            {
+                Marshal.Copy(pixelData.Pixels, 0, bmpData.Scan0, pixelData.Pixels.Length);
+            }
+            finally
+            {
+                renderedBitmap.UnlockBits(bmpData);
+            }
+
+			bm = renderedBitmap;
         }
 
         public void SetProperties(IDictionary<string, object> props)

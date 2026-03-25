@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using fyiReporting.RDL;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Xml;
 
 namespace fyiReporting.CRI
@@ -33,25 +35,38 @@ namespace fyiReporting.CRI
         /// <param name="AztecCode"></param>
         internal void DrawImage(ref System.Drawing.Bitmap bm, string aztecCode)
         {
-#if NETSTANDARD2_0
-            var writer = new ZXing.BarcodeWriter<Bitmap>();
-#else
-            var writer = new ZXing.BarcodeWriter();
-#endif
-            writer.Format = ZXing.BarcodeFormat.AZTEC;
+            int barHeight;
+            int barWidth;
+            using (var g = Graphics.FromImage(bm))
+            {
+                float mag = PixelConversions.GetMagnification(g, bm.Width, bm.Height, OptimalHeight, OptimalWidth);
+                barHeight = PixelConversions.PixelXFromMm(g, OptimalHeight * mag);
+                barWidth = PixelConversions.PixelYFromMm(g, OptimalWidth * mag);
+            }
 
-            Graphics g = null;
-            g = Graphics.FromImage(bm);
-            float mag = PixelConversions.GetMagnification(g, bm.Width, bm.Height, OptimalHeight, OptimalWidth);
-
-            int barHeight = PixelConversions.PixelXFromMm(g, OptimalHeight * mag);
-            int barWidth = PixelConversions.PixelYFromMm(g, OptimalWidth * mag);
+            var writer = new ZXing.BarcodeWriterPixelData
+            {
+                Format = ZXing.BarcodeFormat.AZTEC
+            };
 
             writer.Options.Height = barHeight;
             writer.Options.Width = barWidth;
 
+            var pixelData = writer.Write(aztecCode);
+            var renderedBitmap = new Bitmap(pixelData.Width, pixelData.Height, PixelFormat.Format32bppArgb);
+            var rect = new Rectangle(0, 0, pixelData.Width, pixelData.Height);
+            var bmpData = renderedBitmap.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
 
-            bm = writer.Write(aztecCode);
+            try
+            {
+                Marshal.Copy(pixelData.Pixels, 0, bmpData.Scan0, pixelData.Pixels.Length);
+            }
+            finally
+            {
+                renderedBitmap.UnlockBits(bmpData);
+            }
+
+            bm = renderedBitmap;
 
         }
 

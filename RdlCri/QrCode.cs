@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using fyiReporting.RDL;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Xml;
 using ZXing;
 
@@ -34,27 +36,39 @@ namespace fyiReporting.CRI
         /// <param name="qrcode"></param>
         internal void DrawImage(ref System.Drawing.Bitmap bm, string qrcode)
         {
-#if NETSTANDARD2_0
-            var writer = new ZXing.BarcodeWriter<Bitmap>();
-#else
-			var writer = new ZXing.BarcodeWriter();
-#endif
-			writer.Format = ZXing.BarcodeFormat.QR_CODE;
+            int barHeight;
+            int barWidth;
+            using (var g = Graphics.FromImage(bm))
+            {
+                float mag = PixelConversions.GetMagnification(g, bm.Width, bm.Height, OptimalHeight, OptimalWidth);
+                barHeight = PixelConversions.PixelXFromMm(g, OptimalHeight * mag);
+                barWidth = PixelConversions.PixelYFromMm(g, OptimalWidth * mag);
+            }
 
-			writer.Options.Hints.Add(new KeyValuePair<EncodeHintType, object>(EncodeHintType.CHARACTER_SET, "UTF-8"));
+            var writer = new ZXing.BarcodeWriterPixelData
+            {
+                Format = ZXing.BarcodeFormat.QR_CODE
+            };
 
-            Graphics g = null;
-            g = Graphics.FromImage(bm);
-            float mag = PixelConversions.GetMagnification(g, bm.Width, bm.Height, OptimalHeight, OptimalWidth);
+            writer.Options.Hints.Add(new KeyValuePair<EncodeHintType, object>(EncodeHintType.CHARACTER_SET, "UTF-8"));
+            writer.Options.Height = barHeight;
+            writer.Options.Width = barWidth;
 
-            int barHeight = PixelConversions.PixelXFromMm(g, OptimalHeight * mag);
-            int barWidth = PixelConversions.PixelYFromMm(g, OptimalWidth * mag);
+            var pixelData = writer.Write(qrcode);
+            var renderedBitmap = new Bitmap(pixelData.Width, pixelData.Height, PixelFormat.Format32bppArgb);
+            var rect = new Rectangle(0, 0, pixelData.Width, pixelData.Height);
+            var bmpData = renderedBitmap.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
 
-			writer.Options.Height = barHeight;
-			writer.Options.Width = barWidth;
+            try
+            {
+                Marshal.Copy(pixelData.Pixels, 0, bmpData.Scan0, pixelData.Pixels.Length);
+            }
+            finally
+            {
+                renderedBitmap.UnlockBits(bmpData);
+            }
 
-
-			bm = writer.Write(qrcode);
+            bm = renderedBitmap;
          
         }
 

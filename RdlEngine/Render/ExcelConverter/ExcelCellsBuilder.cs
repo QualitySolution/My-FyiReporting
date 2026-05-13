@@ -106,8 +106,7 @@ namespace RdlEngine.Render.ExcelConverter
 			}
 			float rowHeight = tr.CanGrow ? tr.HeightOfRow(Report, g, row) : tr.Height.Points;
 
-			var shiftingRows = Rows.Where(x => x.YPosition >= rowPosition);
-			ShiftBottomRows(shiftingRows, rowHeight);
+			ShiftBottomRows(rowPosition, rowHeight);
 
 			var currentRow = AddRow(rowPosition, rowHeight);
 			foreach(var cell in tr.TableCells.Items) {
@@ -236,19 +235,14 @@ namespace RdlEngine.Render.ExcelConverter
 		{
 			//Insert row at Top position
 			var currentRow = GetRowAtPosition(top);
-			int rowIndex;
 			if(currentRow == null) {
-				rowIndex = InsertRow(top);
+				int rowIndex = InsertRow(top);
 				currentRow = Rows[rowIndex];
-			} else {
-				rowIndex = Rows.IndexOf(currentRow);
 			}
 			//Insert row at Bottom position
 			float bottomPosition = top + height;
-			var bottomRow = GetRowAtPosition(bottomPosition);
-			if(bottomRow == null) {
-				int bottomRowIndex = InsertRow(bottomPosition);
-				bottomRow = Rows[bottomRowIndex];
+			if(GetRowAtPosition(bottomPosition) == null) {
+				InsertRow(bottomPosition);
 			}
 
 			return currentRow;
@@ -257,106 +251,154 @@ namespace RdlEngine.Render.ExcelConverter
 		private ExcelColumn AddColumn(float left, float width){
 			//Insert column at Left position
 			var currentColumn = GetColumnAtPosition(left);
-			int columnIndex;
 			if(currentColumn == null) {
-				columnIndex = InsertColumn(left);
+				int columnIndex = InsertColumn(left);
 				currentColumn = Columns[columnIndex];
-			} else {
-				columnIndex = Columns.IndexOf(currentColumn);
 			}
 			//Insert column at Right position
 			float rightPosition = left + width;
-			var rightColumn = GetColumnAtPosition(rightPosition);
-			if(rightColumn == null) {
-				int rightColumnIndex = InsertColumn(rightPosition);
-				rightColumn = Columns[rightColumnIndex];
+			if(GetColumnAtPosition(rightPosition) == null) {
+				InsertColumn(rightPosition);
 			}
 			return currentColumn;
 		}
 
 		public ExcelColumn GetRightAttachColumn(ExcelCell cell)
 		{
-			var c = Columns.LastOrDefault(x => x.XPosition < (cell.Column.XPosition + cell.ActualWidth) - Tolerance);
-
-			return c;
+			float limit = cell.Column.XPosition + cell.ActualWidth - Tolerance;
+			// Last column with XPosition < limit
+			int idx = LowerBoundColumn(limit) - 1;
+			if(idx >= 0) return Columns[idx];
+			return null;
 		}
 
 		public int GetRightAttachCells(ExcelCell cell)
 		{
-			int result = 0;
 			if(cell.RightAttachCol != null) {
-				var ri = Columns.IndexOf(cell.RightAttachCol);
-				var li = Columns.IndexOf(cell.Column);
-				result = (ri - li) - 1;
+				var ri = ColumnIndexOf(cell.RightAttachCol);
+				var li = ColumnIndexOf(cell.Column);
+				int result = (ri - li) - 1;
 				return result < 0 ? 0 : result;
 			}
 
-			result = Columns.Count(x => x.XPosition > cell.Column.XPosition
-			                       && x.XPosition < (cell.Column.XPosition + cell.ActualWidth) - Tolerance);
-			return result < 0 ? 0 : result;
+			// Count columns strictly between cell.Column.XPosition and (cell.Column.XPosition + cell.ActualWidth - Tolerance)
+			float leftX = cell.Column.XPosition;
+			float rightX = cell.Column.XPosition + cell.ActualWidth - Tolerance;
+			// first index with XPosition > leftX
+			int lo = LowerBoundColumn(leftX);
+			while(lo < Columns.Count && Columns[lo].XPosition <= leftX + Tolerance) lo++;
+			// first index with XPosition >= rightX
+			int hi = LowerBoundColumn(rightX);
+			int count = hi - lo;
+			return count < 0 ? 0 : count;
 		}
 
 		public int GetBottomAttachCells(ExcelCell cell)
 		{
-			int result = 0;
 			if(cell.BottomAttachRow != null) {
-				var bi = Rows.IndexOf(cell.BottomAttachRow);
-				var ti = Rows.IndexOf(cell.Row);
-				result = (bi - ti) - 1;
+				var bi = RowIndexOf(cell.BottomAttachRow);
+				var ti = RowIndexOf(cell.Row);
+				int result = (bi - ti) - 1;
 				return result < 0 ? 0 : result;
 			}
 
-			return Rows.Count(y => y.YPosition > cell.Row.YPosition
-			                  && y.YPosition < (cell.Row.YPosition + cell.ActualHeight) - Tolerance);
+			// Count rows strictly between cell.Row.YPosition and (cell.Row.YPosition + cell.ActualHeight - Tolerance)
+			float topY = cell.Row.YPosition;
+			float bottomY = cell.Row.YPosition + cell.ActualHeight - Tolerance;
+			// first index with YPosition > topY
+			int lo = LowerBoundRow(topY);
+			while(lo < Rows.Count && Rows[lo].YPosition <= topY + Tolerance) lo++;
+			// first index with YPosition >= bottomY
+			int hi = LowerBoundRow(bottomY);
+			int count = hi - lo;
+			return count < 0 ? 0 : count;
 		}
 
 		public ExcelRow GetBottomAttachRow(ExcelCell cell)
 		{
-			var c = Rows.LastOrDefault(x => x.YPosition < (cell.Row.YPosition + cell.ActualHeight) - Tolerance);
+			float limit = cell.Row.YPosition + cell.ActualHeight - Tolerance;
+			// Last row with YPosition < limit
+			int idx = LowerBoundRow(limit) - 1;
+			if(idx >= 0) return Rows[idx];
+			return null;
+		}
 
-			return c;
+		// Binary search: first index where Rows[i].YPosition >= value
+		private int LowerBoundRow(float value)
+		{
+			int lo = 0, hi = Rows.Count;
+			while(lo < hi) {
+				int mid = (lo + hi) >> 1;
+				if(Rows[mid].YPosition < value) lo = mid + 1;
+				else hi = mid;
+			}
+			return lo;
+		}
+
+		// Binary search: first index where Columns[i].XPosition >= value
+		private int LowerBoundColumn(float value)
+		{
+			int lo = 0, hi = Columns.Count;
+			while(lo < hi) {
+				int mid = (lo + hi) >> 1;
+				if(Columns[mid].XPosition < value) lo = mid + 1;
+				else hi = mid;
+			}
+			return lo;
+		}
+
+		// Binary search for a row by reference within the sorted position range
+		private int RowIndexOf(ExcelRow row)
+		{
+			int idx = LowerBoundRow(row.YPosition - Tolerance);
+			for(int i = idx; i < Rows.Count && Rows[i].YPosition <= row.YPosition + Tolerance; i++) {
+				if(ReferenceEquals(Rows[i], row)) return i;
+			}
+			return -1;
+		}
+
+		// Binary search for a column by reference within the sorted position range
+		private int ColumnIndexOf(ExcelColumn col)
+		{
+			int idx = LowerBoundColumn(col.XPosition - Tolerance);
+			for(int i = idx; i < Columns.Count && Columns[i].XPosition <= col.XPosition + Tolerance; i++) {
+				if(ReferenceEquals(Columns[i], col)) return i;
+			}
+			return -1;
 		}
 
 		private ExcelRow GetRowAtPosition(float yPositionPoints)
 		{
-			return Rows.FirstOrDefault(y => Math.Abs(y.YPosition - yPositionPoints) <= Tolerance);
+			int idx = LowerBoundRow(yPositionPoints - Tolerance);
+			for(int i = idx; i < Rows.Count && Rows[i].YPosition <= yPositionPoints + Tolerance; i++) {
+				if(Math.Abs(Rows[i].YPosition - yPositionPoints) <= Tolerance)
+					return Rows[i];
+			}
+			return null;
 		}
 
 		private ExcelColumn GetColumnAtPosition(float xPositionPoints)
 		{
-			return Columns.FirstOrDefault(x => Math.Abs(x.XPosition - xPositionPoints) <= Tolerance);
+			int idx = LowerBoundColumn(xPositionPoints - Tolerance);
+			for(int i = idx; i < Columns.Count && Columns[i].XPosition <= xPositionPoints + Tolerance; i++) {
+				if(Math.Abs(Columns[i].XPosition - xPositionPoints) <= Tolerance)
+					return Columns[i];
+			}
+			return null;
 		}
 
 		private int InsertRow(float yPositionPoints)
 		{
-			var nextRow = Rows.Where(x => x.YPosition > yPositionPoints).OrderBy(x => x.YPosition).FirstOrDefault();
-
-			if(nextRow == null) {
-				//add new row to end of list
-				var newIndex = Rows.Count;
-				Rows.Insert(newIndex, new ExcelRow(yPositionPoints));
-				return newIndex;
-			}
-
-			var nextRowIndex = Rows.IndexOf(nextRow);
-			Rows.Insert(nextRowIndex, new ExcelRow(yPositionPoints));
-			return nextRowIndex;
+			int idx = LowerBoundRow(yPositionPoints);
+			Rows.Insert(idx, new ExcelRow(yPositionPoints));
+			return idx;
 		}
 
 		private int InsertColumn(float xPositionPoints)
 		{
-			var nextColumn = Columns.Where(x => x.XPosition > xPositionPoints).OrderBy(x => x.XPosition).FirstOrDefault();
-
-			if(nextColumn == null) {
-				//add new column to end of list
-				var newIndex = Columns.Count;
-				Columns.Insert(newIndex, new ExcelColumn(xPositionPoints));
-				return newIndex;
-			}
-
-			var nextColumnIndex = Columns.IndexOf(nextColumn);
-			Columns.Insert(nextColumnIndex, new ExcelColumn(xPositionPoints));
-			return nextColumnIndex;
+			int idx = LowerBoundColumn(xPositionPoints);
+			Columns.Insert(idx, new ExcelColumn(xPositionPoints));
+			return idx;
 		}
 	
 		private bool ResolveIntersectionConflict(ExcelCell A, ExcelCell B)
@@ -628,11 +670,12 @@ namespace RdlEngine.Render.ExcelConverter
 			}
 		}
 
-		private void ShiftBottomRows(IEnumerable<ExcelRow> rows, float yOffset)
+		private void ShiftBottomRows(float fromPosition, float yOffset)
 		{
-			foreach(var row in rows) {
-				row.yOffset += yOffset;
-				row.YPosition += yOffset;
+			int startIdx = LowerBoundRow(fromPosition);
+			for(int i = startIdx; i < Rows.Count; i++) {
+				Rows[i].yOffset += yOffset;
+				Rows[i].YPosition += yOffset;
 			}
 		}
 

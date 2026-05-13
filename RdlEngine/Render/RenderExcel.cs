@@ -22,14 +22,7 @@
 */
 
 using System;
-using fyiReporting.RDL;
 using System.IO;
-using System.Collections;
-using System.Collections.Generic;
-using System.Drawing.Imaging;
-using System.Text;
-using System.Xml;
-using System.Globalization;
 using System.Drawing;
 
 namespace fyiReporting.RDL

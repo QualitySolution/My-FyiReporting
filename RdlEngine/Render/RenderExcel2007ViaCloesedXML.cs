@@ -90,7 +90,7 @@ namespace fyiReporting.RDL
 
         }
 
-        public virtual void End()
+		public virtual void End()
         {
             excelBuilder.CellsCorrection();
             for (int i = 0; i < excelBuilder.Columns.Count - 1; i++)
@@ -112,6 +112,12 @@ namespace fyiReporting.RDL
                     worksheet.Row(i + 1).Height = Math.Min(heightInPoints, 409);
             }
 
+            // Precompute column index map once — O(1) lookup instead of O(n) IndexOf per cell
+            var columnIndexMap = new System.Collections.Generic.Dictionary<ExcelColumn, int>(
+                excelBuilder.Columns.Count);
+            for (int i = 0; i < excelBuilder.Columns.Count; i++)
+                columnIndexMap[excelBuilder.Columns[i]] = i;
+
             for (int i = 0; i < excelBuilder.Rows.Count - 1; i++)
             {
                 var builderRow = excelBuilder.Rows[i];
@@ -120,8 +126,7 @@ namespace fyiReporting.RDL
                 for (int j = 0; j < builderRow.Cells.Count; j++)
                 {
                     var builderCell = builderRow.Cells[j];
-                    var columnIndex = excelBuilder.Columns.IndexOf(builderCell.Column);
-                    if (columnIndex < 0) continue;
+                    if (!columnIndexMap.TryGetValue(builderCell.Column, out var columnIndex)) continue;
                     var exelColumnIndex = columnIndex + 1;
                     var cell = worksheet.Cell(rowIndex, exelColumnIndex);
                     if (builderCell.ReportItem != null)

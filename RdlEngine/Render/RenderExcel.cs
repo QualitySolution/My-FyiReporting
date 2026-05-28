@@ -122,6 +122,8 @@ namespace fyiReporting.RDL
             if (_workbook.Worksheets.Count == 0)
                 EnsureSheet("Sheet1");
 
+            // XLSX serialization — opaque, no per-step progress available
+            ExportProgress.BeginIndeterminate("Сохранение XLSX...");
             _workbook.SaveAs(_sg.GetStream());
 
             if (_g != null)
@@ -303,6 +305,12 @@ namespace fyiReporting.RDL
             EnsureSheet(l.Name.Nm);
             _ExcelRow = -1;
 
+            if (l.DataSetDefn != null)
+            {
+                var data = l.DataSetDefn.Query.GetMyData(r);
+                if (data != null) ExportProgress.AddToTotal(data.Data.Count);
+            }
+
             int ci = 0;
             foreach (ReportItem ri in l.ReportItems)
             {
@@ -323,6 +331,7 @@ namespace fyiReporting.RDL
 
         public void ListEntryBegin(List l, Row row)
         {
+            ExportProgress.Increment();
             _ExcelRow++;
             _ExcelCol = -1;
 
@@ -347,6 +356,12 @@ namespace fyiReporting.RDL
         {
             EnsureSheet(t.Name.Nm);
             _ExcelRow = -1;
+
+            if (t.DataSetDefn != null)
+            {
+                var data = t.DataSetDefn.Query.GetMyData(r);
+                if (data != null) ExportProgress.AddToTotal(data.Data.Count);
+            }
 
             int excelColumnIndex = 0;
             for (int ci = 0; ci < t.TableColumns.Items.Count; ci++)
@@ -380,6 +395,7 @@ namespace fyiReporting.RDL
 
         public void TableRowStart(TableRow tr, Row row)
         {
+            if (row != null) ExportProgress.Increment();  // only data rows
             _ExcelRow++;
             SetRowHeight(_ExcelRow, tr.HeightOfRow(r, this.GetGraphics, row));
             _ExcelCol = -1;
@@ -408,6 +424,9 @@ namespace fyiReporting.RDL
         {
             EnsureSheet(m.Name.Nm);
             _ExcelRow = -1;
+
+            ExportProgress.AddToTotal(maxRows);
+
             // set the widths of the columns
             float[] widths = m.ColumnWidths(matrix, maxCols);
             for (int i = 0; i < maxCols; i++)
@@ -428,6 +447,7 @@ namespace fyiReporting.RDL
 
         public void MatrixRowStart(Matrix m, int row, Row r)
         {
+            ExportProgress.Increment();
             _ExcelRow++;
             _ExcelCol = -1;
         }

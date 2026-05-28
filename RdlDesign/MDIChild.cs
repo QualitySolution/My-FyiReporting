@@ -311,7 +311,19 @@ namespace fyiReporting.RdlDesign
                     else if (dr == DialogResult.Cancel)
                         return false;
                 }
-                try { SaveAs(sfd.FileName, type); }
+                try
+                {
+                    if (IsExcelType(type))
+                    {
+                        string fileName = sfd.FileName;
+                        OutputPresentationType exportType = type;
+                        DialogExportProgress.Run(this, exportType, () => SaveAs(fileName, exportType));
+                    }
+                    else
+                    {
+                        SaveAs(sfd.FileName, type);
+                    }
+                }
                 catch (Exception ex)
                 {
                     MessageBox.Show(this,
@@ -512,6 +524,11 @@ namespace fyiReporting.RdlDesign
         {
             rdlDesigner.SaveAs(filename, type);
         }
+
+        private static bool IsExcelType(OutputPresentationType type)
+            => type == OutputPresentationType.ExcelTableOnly
+            || type == OutputPresentationType.Excel2007ClosedXML
+            || type == OutputPresentationType.Excel2007NPOI;
 
         private void MDIChild_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {

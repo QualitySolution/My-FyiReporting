@@ -115,8 +115,12 @@ namespace fyiReporting.RDL
                 row.HeightInPoints = (excelBuilder.Rows[i + 1].YPosition - builderRow.YPosition);
             }
 
+            int rowsToWrite = System.Math.Max(0, excelBuilder.Rows.Count - 1);
+            ExportProgress.BeginPhase("Запись данных в Excel", rowsToWrite);
+
             for (int i = 0; i < excelBuilder.Rows.Count - 1; i++)
             {
+                ExportProgress.Increment();
                 var builderRow = excelBuilder.Rows[i];
                 XSSFRow row = (XSSFRow)worksheet.GetRow(i);
 
@@ -231,6 +235,7 @@ namespace fyiReporting.RDL
                 //lineShape.GetCTShape().spPr.xfrm.flipV = line.FlipV;
             }
 
+            ExportProgress.BeginIndeterminate("Сохранение XLSX...");
             workbook.Write(_sg.GetStream());
             return;
         }
@@ -350,6 +355,13 @@ namespace fyiReporting.RDL
         {
             if (t.Visibility == null || (t.Visibility != null && !t.Visibility.IsHidden(report, row)))
             {
+                // register the number of rows we are about to emit for progress bar
+                if (t.DataSetDefn != null)
+                {
+                    var data = t.DataSetDefn.Query.GetMyData(report);
+                    if (data != null) ExportProgress.AddToTotal(data.Data.Count);
+                }
+
                 excelBuilder.AddTable(t);
                 return true;
             }
@@ -392,6 +404,7 @@ namespace fyiReporting.RDL
 
         public void TableRowStart(TableRow tr, Row row)
         {
+            if (row != null) ExportProgress.Increment();  // only data rows
             excelBuilder.AddRow(tr, row);
         }
 

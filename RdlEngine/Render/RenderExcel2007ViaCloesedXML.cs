@@ -118,6 +118,9 @@ namespace fyiReporting.RDL
             for (int i = 0; i < excelBuilder.Columns.Count; i++)
                 columnIndexMap[excelBuilder.Columns[i]] = i;
 
+            var styleCache = new System.Collections.Generic.Dictionary<StyleInfo, IXLStyle>(
+                StyleInfoValueComparer.Instance);
+
             int rowsToWrite = System.Math.Max(0, excelBuilder.Rows.Count - 1);
             ExportProgress.BeginPhase("Запись данных в Excel", rowsToWrite);
 
@@ -139,7 +142,16 @@ namespace fyiReporting.RDL
 
                         if (builderCell.Style != null)
                         {
-                            ExcelCellStyle.ApplyStyle(cell, builderCell.Style);
+                            if (styleCache.TryGetValue(builderCell.Style, out IXLStyle cachedStyle))
+                            {
+                                // Fast path: assign the cached style key directly.
+                                cell.Style = cachedStyle;
+                            }
+                            else
+                            {
+                                ExcelCellStyle.ApplyStyle(cell, builderCell.Style);
+                                styleCache[builderCell.Style] = cell.Style;
+                            }
                         }
 
                         var rightAttach = excelBuilder.GetRightAttachCells(builderCell);
@@ -237,41 +249,34 @@ namespace fyiReporting.RDL
         {
             if (string.IsNullOrEmpty(value)) return;
 
-            if (value.StartsWith("0") && value.Length > 1 && double.TryParse(value, out _))
+            char first = value[0];
+            bool looksNumeric = first == '-' || first == '+' || first == '.' || (first >= '0' && first <= '9');
+
+            if (looksNumeric && first == '0' && value.Length > 1 && double.TryParse(value, out _))
             {
                 cell.Value = value;
-                //cell.DataType = XLDataType.Text; // Принудительно текст
             }
-            else if (double.TryParse(value, out double dVal))
+            else if (looksNumeric && double.TryParse(value, out double dVal))
             {
                 cell.Value = dVal;
             }
-            else if (DateTime.TryParse(value, out DateTime dtVal))
+            else if (looksNumeric && !ContainsLetter(value) && DateTime.TryParse(value, out DateTime dtVal))
             {
-                bool hasLetters = false;
-                for (int i = 0; i < value.Length; i++)
-                {
-                    if (char.IsLetter(value[i]))
-                    {
-                        hasLetters = true;
-                        break;
-                    }
-                }
-
-                if (hasLetters)
-                {
-                    cell.Value = value;
-                }
-                else
-                {
-                    cell.Value = dtVal;
-                }
+                cell.Value = dtVal;
             }
             else
             {
                 cell.Value = value;
             }
-            cell.Style.Alignment.WrapText = true;
+        }
+
+        private static bool ContainsLetter(string value)
+        {
+            for (int i = 0; i < value.Length; i++)
+            {
+                if (char.IsLetter(value[i])) return true;
+            }
+            return false;
         }
 
 

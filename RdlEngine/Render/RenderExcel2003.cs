@@ -154,7 +154,7 @@ namespace fyiReporting.RDL
                     sourceCellStyle = (XSSFCellStyle)oldCell.Sheet.Workbook.CreateCellStyle();
                 }
                 // destnCellStyle.CloneStyleFrom(oldCell.CellStyle);
-                if (!styleMap.Any(p => p.Key == stHashCode))
+                if (!styleMap.ContainsKey(stHashCode))
                 {
                     styleMap.Add(stHashCode, sourceCellStyle);
                 }

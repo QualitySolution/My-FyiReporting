@@ -31,10 +31,7 @@ using System.IO;
 namespace fyiReporting.RDL
 {
     ///<summary>
-    /// Renders a report to Excel (XLSX) as a "flat" dump: one sheet per
-    /// top-level Table/List/Matrix, no positional rendering. Backed by
-    /// ClosedXML to match the performance characteristics of
-    /// <see cref="RenderExcel2007ViaCloesedXML"/>.
+    /// Renders a report to Excel as a flat dump
     ///</summary>
     internal class RenderExcel : IPresent
     {
@@ -57,6 +54,9 @@ namespace fyiReporting.RDL
         const double ColumnWidthMaxSymbols = 255;
 
         readonly HashSet<string> _usedSheetNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        readonly Dictionary<StyleInfo, IXLStyle> _styleCache =
+            new Dictionary<StyleInfo, IXLStyle>(StyleInfoValueComparer.Instance);
 
         public RenderExcel(Report rep, IStreamGen sg)
         {
@@ -187,7 +187,17 @@ namespace fyiReporting.RDL
             SetValue(cell, val);
 
             if (si != null)
-                ExcelCellStyle.ApplyStyle(cell, si);
+            {
+                if (_styleCache.TryGetValue(si, out IXLStyle cached))
+                {
+                    cell.Style = cached;
+                }
+                else
+                {
+                    ExcelCellStyle.ApplyStyle(cell, si);
+                    _styleCache[si] = cell.Style;
+                }
+            }
         }
 
         private void SetColumnWidth(int col, float pointsWidth)

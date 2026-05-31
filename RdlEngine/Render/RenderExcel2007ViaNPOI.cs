@@ -115,6 +115,12 @@ namespace fyiReporting.RDL
                 row.HeightInPoints = (excelBuilder.Rows[i + 1].YPosition - builderRow.YPosition);
             }
 
+            var columnIndexMap = new Dictionary<ExcelColumn, int>(excelBuilder.Columns.Count);
+            for (int c = 0; c < excelBuilder.Columns.Count; c++)
+                columnIndexMap[excelBuilder.Columns[c]] = c;
+
+            var styleCache = new Dictionary<StyleInfo, XSSFCellStyle>(StyleInfoValueComparer.Instance);
+
             int rowsToWrite = System.Math.Max(0, excelBuilder.Rows.Count - 1);
             ExportProgress.BeginPhase("Запись данных в Excel", rowsToWrite);
 
@@ -123,33 +129,23 @@ namespace fyiReporting.RDL
                 ExportProgress.Increment();
                 var builderRow = excelBuilder.Rows[i];
                 XSSFRow row = (XSSFRow)worksheet.GetRow(i);
+                int rowIndex = i;   // builderCell.Row == Rows[i] by construction
 
                 for (int j = 0; j < builderRow.Cells.Count; j++)
                 {
                     var builderCell = builderRow.Cells[j];
-                    var columnIndex = excelBuilder.Columns.IndexOf(builderCell.Column);
+                    if (!columnIndexMap.TryGetValue(builderCell.Column, out int columnIndex)) continue;
                     XSSFCell cell = (XSSFCell)row.CreateCell(columnIndex);
 
                     if (builderCell.ReportItem != null)
                     {
-                        ExcelCellStyle style = null;
-                        style = new ExcelCellStyle(builderCell.Style);
-
-                        XSSFCellStyle xssfStyle = null;
-                        for (int s = 0; s < workbook.NumCellStyles; s++)
+                        XSSFCellStyle xssfStyle;
+                        if (!styleCache.TryGetValue(builderCell.Style, out xssfStyle))
                         {
-                            XSSFCellStyle innerStyle = (XSSFCellStyle)workbook.GetCellStyleAt(s);
-
-                            if (style.CompareWithXSSFStyle(innerStyle))
-                            {
-                                xssfStyle = innerStyle;
-                                break;
-                            }
-                        }
-                        if (xssfStyle == null)
-                        {
+                            var style = new ExcelCellStyle(builderCell.Style);
                             xssfStyle = (XSSFCellStyle)workbook.CreateCellStyle();
                             style.SetToStyle(xssfStyle);
+
                             XSSFFont font = null;
                             for (short f = 0; f < workbook.NumberOfFonts; f++)
                             {
@@ -159,7 +155,6 @@ namespace fyiReporting.RDL
                                     font = innerfont;
                                     break;
                                 }
-
                             }
                             if (font == null)
                             {
@@ -168,16 +163,17 @@ namespace fyiReporting.RDL
                             }
                             font.FontHeightInPoints -= 1;
                             xssfStyle.SetFont(font);
+                            xssfStyle.WrapText = true;
+
+                            styleCache[builderCell.Style] = xssfStyle;
                         }
 
                         var rightAttach = excelBuilder.GetRightAttachCells(builderCell);
                         var bottomAttach = excelBuilder.GetBottomAttachCells(builderCell);
 
-                        var rowIndex = excelBuilder.Rows.IndexOf(builderCell.Row);
-                        var colIndex = excelBuilder.Columns.IndexOf(builderCell.Column);
-
                         if (rightAttach > 0 || bottomAttach > 0)
                         {
+                            int colIndex = columnIndex;
                             var mergeRegion = new NPOI.SS.Util.CellRangeAddress(rowIndex,
                                                                                 rowIndex + bottomAttach,
                                                                                 colIndex,
@@ -193,8 +189,6 @@ namespace fyiReporting.RDL
                             RegionUtil.SetBorderLeft((int)xssfStyle.BorderLeft, mergeRegion, worksheet);
                             RegionUtil.SetLeftBorderColor(xssfStyle.LeftBorderColor, mergeRegion, worksheet);
                         }
-
-                        xssfStyle.WrapText = true;
 
                         cell.CellStyle = xssfStyle;
 

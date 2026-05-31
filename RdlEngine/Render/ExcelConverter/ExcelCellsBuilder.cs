@@ -19,6 +19,10 @@ namespace RdlEngine.Render.ExcelConverter
 		public List<ExcelLine> Lines { get; private set; }
 		public List<ExcelTable> Tables { get; private set; }
 
+		private readonly List<ExcelCell> _nonTableCells = new List<ExcelCell>();
+		private readonly Dictionary<ReportItem, StyleInfo> _constantStyleCache =
+			new Dictionary<ReportItem, StyleInfo>();
+
 		private float rowPosition = 0f;
 		private float tableLeftPosition = 0f;
 		private ExcelTable CurrentExcelTable = null;
@@ -140,7 +144,7 @@ namespace RdlEngine.Render.ExcelConverter
 				}
 				currentCell.GrowedBottomPosition = rowPosition + rowHeight;
 				SetCellStyle(currentCell, cellTextBox, row);
-				Cells.Add(currentCell);
+				AddCell(currentCell);
 			}
 
 			rowPosition += rowHeight;
@@ -191,28 +195,41 @@ namespace RdlEngine.Render.ExcelConverter
 			ExcelCell currentCell = new ExcelCell(reportItem, value, currentRow, currentColumn);
 			currentCell.OriginalBottomPosition = OriginalBottomPosition;
 			SetCellStyle(currentCell, reportItem, row);
-			Cells.Add(currentCell);
+			AddCell(currentCell);
 			currentCell.OriginalHeight = height;
 			currentCell.GrowedBottomPosition = topPosition + height;
 		}
 
 		private void SetCellStyle(ExcelCell excelCell, ReportItem reportItem, Row row)
 		{
-			StyleInfo si = new StyleInfo();
+			StyleInfo si = null;
 			if(reportItem.Style != null) {
-				var itemStyleInfo = reportItem.Style.GetStyleInfo(Report, row);
-				if(itemStyleInfo != null) {
-					si = itemStyleInfo;
+				if(reportItem.Style.ConstantStyle) {
+					if(!_constantStyleCache.TryGetValue(reportItem, out si)) {
+						si = reportItem.Style.GetStyleInfo(Report, row);
+						_constantStyleCache[reportItem] = si;
+					}
+				} else {
+					si = reportItem.Style.GetStyleInfo(Report, row);
 				}
+			}
+			if(si == null) {
+				si = new StyleInfo();
 			}
 			excelCell.Style = si;
 		}
 
 		public float GetCellAboveRelativePosition(float top)
 		{
-			var aboveCell = Cells.Where(x => x.OriginalBottomPosition < top)
-			                     .OrderByDescending(x => x.GrowedBottomPosition)
-			                     .FirstOrDefault();
+			ExcelCell aboveCell = null;
+			float bestGrowed = float.NegativeInfinity;
+			for(int idx = 0; idx < Cells.Count; idx++) {
+				var x = Cells[idx];
+				if(x.OriginalBottomPosition < top && x.GrowedBottomPosition > bestGrowed) {
+					bestGrowed = x.GrowedBottomPosition;
+					aboveCell = x;
+				}
+			}
 			if(aboveCell == null) {
 				return top;
 			}
@@ -567,7 +584,7 @@ namespace RdlEngine.Render.ExcelConverter
 				ResolveIntersectionConflict(cell, existCell);
 			}
 			newCell.Style = cell.Style;
-			Cells.Add(newCell);
+			AddCell(newCell);
 			newCell.Row.Cells.Add(newCell);
 			newStartColumn.Cells.Add(newCell);
 			RemoveCell(cell);
@@ -608,9 +625,18 @@ namespace RdlEngine.Render.ExcelConverter
 			cell.CorrectedHeight = toPos - TopPosition;
 		}
 
+		private void AddCell(ExcelCell cell)
+		{
+			Cells.Add(cell);
+			if (cell.ExcelTable == null)
+				_nonTableCells.Add(cell);
+		}
+
 		private void RemoveCell(ExcelCell cell)
 		{
 			Cells.Remove(cell);
+			if (cell.ExcelTable == null)
+				_nonTableCells.Remove(cell);
 			cell.Column.Cells.Remove(cell);
 			cell.Row.Cells.Remove(cell);
 		}
@@ -628,44 +654,43 @@ namespace RdlEngine.Render.ExcelConverter
 
 		public void CellsCorrection()
 		{
-			for(int i = 0; i < Cells.Count; i++) {
-				var count = Cells.Count;
+			for (int i = 0; i < _nonTableCells.Count; i++)
+			{
+				var count = _nonTableCells.Count;
+				var cell = _nonTableCells[i];
 
-				var cell = Cells[i];
-				if(cell.ExcelTable != null) {
-					continue;
+				var unresolvedCells = new List<ExcelCell>();
+				float cellTop = cell.Row.YPosition;
+				float cellBottom = cell.OriginalHeight + cellTop;
+				float cellLeft = cell.Column.XPosition;
+				float cellRight = cell.OriginalWidth + cellLeft;
+
+				for (int k = 0; k < _nonTableCells.Count; k++)
+				{
+					var x = _nonTableCells[k];
+					float xTop = x.Row.YPosition;
+					float xBottom = x.OriginalHeight + xTop;
+					float xLeft = x.Column.XPosition;
+					float xRight = x.OriginalWidth + xLeft;
+
+					if (!(xBottom < cellTop || cellBottom < xTop || xRight < cellLeft || cellRight < xLeft))
+					{
+						unresolvedCells.Add(x);
+					}
 				}
 
-				var unresolvedCells = Cells
-					//didn't apply correction to table cells
-					.Where(x => x.ExcelTable == null)
-					//simple check intersection, for select only intersection available cells
-					.Where(x => 
-					       !((x.OriginalHeight + x.Row.YPosition) < cell.Row.YPosition ||
-					       (cell.OriginalHeight + cell.Row.YPosition) < x.Row.YPosition ||
-					       (x.OriginalWidth + x.Column.XPosition) < cell.Column.XPosition ||
-					       (cell.OriginalWidth + cell.Column.XPosition) < x.Column.XPosition))
-					.ToList();
-
-				/*foreach(var table in Tables) {
-					float tableLeft = table.Table.Left.Points;
-					float tableTop = table.Table.Top.Points;
-					FillAbsolutePosition(table.Table, ref tableTop, ref tableLeft);
-
-					float tableRight = tableLeft + table.TableWidth;
-					float tableBottom = table.GrowedBottomPosition;
-					ResolveIntersectionConflict(cell, tableLeft, tableRight, tableTop, tableBottom);
-				}*/
-
-				while(unresolvedCells.Count > 0) {
-					var uc = unresolvedCells[unresolvedCells.Count - 1];
-					if(uc != cell) {
+				while (unresolvedCells.Count > 0)
+				{
+					int lastIdx = unresolvedCells.Count - 1;
+					var uc = unresolvedCells[lastIdx];
+					if (uc != cell)
+					{
 						ResolveIntersectionConflict(cell, uc);
 					}
-					unresolvedCells.Remove(uc);
+					unresolvedCells.RemoveAt(lastIdx);
 				}
 
-				var dCount = i - (count - Cells.Count);
+				var dCount = i - (count - _nonTableCells.Count);
 				i = dCount < 0 ? 0 : dCount;
 			}
 		}

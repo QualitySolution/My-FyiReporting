@@ -1,15 +1,4 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-*/
+using System;
 using System.Threading;
 
 namespace fyiReporting.RDL
@@ -22,16 +11,30 @@ namespace fyiReporting.RDL
         private static int _current;
         private static int _total;
         private static string _phase;
+        private static volatile bool _cancelRequested;
 
         public static int Current { get { return Volatile.Read(ref _current); } }
         public static int Total { get { return Volatile.Read(ref _total); } }
         public static string Phase { get { return Volatile.Read(ref _phase); } }
+
+        /// <summary>True if the UI requested cancellation of the current export</summary>
+        public static bool CancelRequested { get { return _cancelRequested; } }
+
+        /// <summary>Cooperative cancel: the next Increment() in the render loop throws</summary>
+        public static void RequestCancel() { _cancelRequested = true; }
+
+        /// <summary>Throws OperationCanceledException if a cancel was requested</summary>
+        public static void ThrowIfCancellationRequested()
+        {
+            if (_cancelRequested) throw new OperationCanceledException();
+        }
 
         public static void Reset()
         {
             Volatile.Write(ref _current, 0);
             Volatile.Write(ref _total, 0);
             Volatile.Write(ref _phase, null);
+            _cancelRequested = false;
         }
 
         public static void BeginPhase(string phaseName, int total)
@@ -44,6 +47,7 @@ namespace fyiReporting.RDL
         public static void BeginIndeterminate(string phaseName)
         {
             Volatile.Write(ref _current, 0);
+
             Volatile.Write(ref _total, 0);
             Volatile.Write(ref _phase, phaseName);
         }
@@ -55,6 +59,7 @@ namespace fyiReporting.RDL
 
         public static void Increment()
         {
+            if (_cancelRequested) throw new OperationCanceledException();
             Interlocked.Increment(ref _current);
         }
     }

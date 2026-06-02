@@ -1,15 +1,3 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-*/
 using System;
 using System.Drawing;
 using System.Globalization;
@@ -19,9 +7,6 @@ using fyiReporting.RDL;
 
 namespace fyiReporting.RdlDesign
 {
-    /// <summary>
-    /// Modal progress dialog shown while a long export operation runs on a background thread
-    /// </summary>
     internal sealed class DialogExportProgress : Form
     {
         private readonly OutputPresentationType _type;
@@ -32,7 +17,9 @@ namespace fyiReporting.RdlDesign
         private readonly Label _elapsedLabel;
         private readonly Label _remainingLabel;
         private readonly ProgressBar _progress;
+        private readonly Button _cancelButton;
         private bool _progressBarIsContinuous;
+        private bool _cancelling;
         private DateTime _phaseStarted;
         private string _lastPhase;
         private Exception _error;
@@ -42,18 +29,18 @@ namespace fyiReporting.RdlDesign
             _type = type;
             _work = work ?? throw new ArgumentNullException(nameof(work));
 
-            Text = string.Format("Экспорт в {0}", FriendlyName(type));
+            Text = string.Format("Export in {0}", FriendlyName(type));
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterParent;
             MinimizeBox = false;
             MaximizeBox = false;
             ControlBox = false;
             ShowInTaskbar = false;
-            ClientSize = new Size(380, 130);
+            ClientSize = new Size(380, 168);
 
             _statusLabel = new Label
             {
-                Text = "Подготовка...",
+                Text = "Prepare...",
                 Location = new Point(12, 12),
                 AutoSize = false,
                 Size = new Size(356, 18),
@@ -72,23 +59,33 @@ namespace fyiReporting.RdlDesign
 
             _elapsedLabel = new Label
             {
-                Text = "Прошло: 0:00",
+                Text = "Passed: 0:00",
                 Location = new Point(12, 74),
                 AutoSize = true
             };
 
             _remainingLabel = new Label
             {
-                Text = "Осталось: —",
+                Text = "Remains: —",
                 Location = new Point(200, 74),
                 AutoSize = true,
                 ForeColor = SystemColors.GrayText
             };
 
+            _cancelButton = new Button
+            {
+                Text = "Cancel",
+                Size = new Size(100, 28),
+                Location = new Point(268, 128),
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+            };
+            _cancelButton.Click += OnCancelClick;
+
             Controls.Add(_statusLabel);
             Controls.Add(_progress);
             Controls.Add(_elapsedLabel);
             Controls.Add(_remainingLabel);
+            Controls.Add(_cancelButton);
 
             _timer = new System.Windows.Forms.Timer { Interval = 250 };
             _timer.Tick += OnTick;
@@ -99,9 +96,6 @@ namespace fyiReporting.RdlDesign
             FormClosed += (s, e) => _timer.Dispose();
         }
 
-        /// <summary>
-        /// Shows the dialog modally and runs the work delegate on a background thread. Returns when the work completes
-        /// </summary>
         public static void Run(IWin32Window owner, OutputPresentationType type, Action work)
         {
             using (var dlg = new DialogExportProgress(type, work))
@@ -112,6 +106,14 @@ namespace fyiReporting.RdlDesign
             }
         }
 
+        private void OnCancelClick(object sender, EventArgs e)
+        {
+            ExportProgress.RequestCancel();
+            _cancelling = true;
+            _cancelButton.Enabled = false;
+            _statusLabel.Text = "Cancelation...";
+        }
+
         private async void OnShown(object sender, EventArgs e)
         {
             ExportProgress.Reset();
@@ -119,6 +121,10 @@ namespace fyiReporting.RdlDesign
             try
             {
                 await Task.Run(_work).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException)
+            {
+                // User pressed Cancel
             }
             catch (Exception ex)
             {
@@ -135,7 +141,10 @@ namespace fyiReporting.RdlDesign
         {
             DateTime now = DateTime.UtcNow;
             TimeSpan elapsed = now - _started;
-            _elapsedLabel.Text = "Прошло: " + Format(elapsed);
+            _elapsedLabel.Text = "Passed: " + Format(elapsed);
+
+            if (_cancelling)
+                return;
 
             int current = ExportProgress.Current;
             int total = ExportProgress.Total;
@@ -162,7 +171,7 @@ namespace fyiReporting.RdlDesign
                 _progressBarIsContinuous = false;
             }
 
-            string phasePrefix = string.IsNullOrEmpty(phase) ? "Обработано" : phase;
+            string phasePrefix = string.IsNullOrEmpty(phase) ? "Processed" : phase;
 
             if (total > 0)
             {
@@ -172,30 +181,29 @@ namespace fyiReporting.RdlDesign
                     "{0}: {1} / {2} ({3}%)",
                     phasePrefix, FormatNumber(current), FormatNumber(total), pct);
 
-                // ETA from observed rate within the current phase
                 if (current > 0 && phaseElapsed.TotalSeconds > 0.5)
                 {
                     double remainingSeconds = phaseElapsed.TotalSeconds * (total - current) / current;
                     if (remainingSeconds < 0) remainingSeconds = 0;
-                    _remainingLabel.Text = "Осталось: ~" + Format(TimeSpan.FromSeconds(remainingSeconds));
+                    _remainingLabel.Text = "Remains: ~" + Format(TimeSpan.FromSeconds(remainingSeconds));
                     _remainingLabel.ForeColor = SystemColors.ControlText;
                 }
             }
             else if (current > 0)
             {
                 _statusLabel.Text = string.Format("{0}: {1}", phasePrefix, FormatNumber(current));
-                _remainingLabel.Text = "Осталось: —";
+                _remainingLabel.Text = "Remains: —";
                 _remainingLabel.ForeColor = SystemColors.GrayText;
             }
             else if (!string.IsNullOrEmpty(phase))
             {
                 _statusLabel.Text = phase;
-                _remainingLabel.Text = "Осталось: —";
+                _remainingLabel.Text = "Remains: —";
                 _remainingLabel.ForeColor = SystemColors.GrayText;
             }
             else
             {
-                _statusLabel.Text = "Подготовка данных...";
+                _statusLabel.Text = "Data preparation...";
             }
         }
 
@@ -213,9 +221,9 @@ namespace fyiReporting.RdlDesign
         {
             switch (type)
             {
-                case OutputPresentationType.ExcelTableOnly: return "Excel (быстрый)";
-                case OutputPresentationType.Excel2007ClosedXML: return "Excel (ClosedXML)";
-                case OutputPresentationType.Excel2007NPOI: return "Excel (NPOI)";
+                case OutputPresentationType.ExcelTableOnly: return "Table Only";
+                case OutputPresentationType.Excel2007ClosedXML: return "Optimized Without Shapes";
+                case OutputPresentationType.Excel2007NPOI: return "Full";
                 default: return type.ToString();
             }
         }

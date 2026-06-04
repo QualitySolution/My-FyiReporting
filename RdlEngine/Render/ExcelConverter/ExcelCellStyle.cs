@@ -3,6 +3,7 @@ using fyiReporting.RDL;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using BorderStyleEnum = fyiReporting.RDL.BorderStyleEnum;
@@ -577,6 +578,28 @@ namespace RdlEngine.Render.ExcelConverter
             }
 
             ApplyBorders(xlStyle, styleInfo);
+        }
+
+        public static void ApplyCachedStyle(IXLCell cell, StyleInfo styleInfo, IDictionary<StyleInfo, IXLStyle> cache)
+        {
+            if (styleInfo == null) return;
+            if (cache.TryGetValue(styleInfo, out IXLStyle cached))
+            {
+                cell.Style = cached;
+                return;
+            }
+            ApplyStyle(cell, styleInfo);
+            cache[styleInfo] = cell.Style;
+        }
+
+        public static T GetOrBuildStyle<T>(IDictionary<StyleInfo, T> cache, StyleInfo styleInfo, Func<StyleInfo, T> build)
+        {
+            if (!cache.TryGetValue(styleInfo, out T style))
+            {
+                style = build(styleInfo);
+                cache[styleInfo] = style;
+            }
+            return style;
         }
 
         public static void ApplyBorderToRange(IXLRange range, StyleInfo styleInfo)

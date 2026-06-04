@@ -122,7 +122,7 @@ namespace fyiReporting.RDL
                 StyleInfoValueComparer.Instance);
 
             int rowsToWrite = System.Math.Max(0, excelBuilder.Rows.Count - 1);
-            ExportProgress.BeginPhase("Запись данных в Excel", rowsToWrite);
+            ExportProgress.BeginPhase("Write in Excel", rowsToWrite);
 
             for (int i = 0; i < excelBuilder.Rows.Count - 1; i++)
             {
@@ -138,20 +138,9 @@ namespace fyiReporting.RDL
                     var cell = worksheet.Cell(rowIndex, exelColumnIndex);
                     if (builderCell.ReportItem != null)
                     {
-                        ExcelValueConverter.SetCellValue(ref cell, builderCell.TypedValue, builderCell.Value);
+                        ExcelValueConverter.SetCellValue(cell, builderCell.TypedValue, builderCell.Value);
 
-                        if (builderCell.Style != null)
-                        {
-                            if (styleCache.TryGetValue(builderCell.Style, out IXLStyle cachedStyle))
-                            {
-                                cell.Style = cachedStyle;
-                            }
-                            else
-                            {
-                                ExcelCellStyle.ApplyStyle(cell, builderCell.Style);
-                                styleCache[builderCell.Style] = cell.Style;
-                            }
-                        }
+                        ExcelCellStyle.ApplyCachedStyle(cell, builderCell.Style, styleCache);
 
                         var rightAttach = excelBuilder.GetRightAttachCells(builderCell);
                         var bottomAttach = excelBuilder.GetBottomAttachCells(builderCell);
@@ -240,7 +229,7 @@ namespace fyiReporting.RDL
                 }
             }
 
-            ExportProgress.BeginIndeterminate("Сохранение XLSX...");
+            ExportProgress.BeginIndeterminate("Saving XLSX...");
             workbook.SaveAs(_sg.GetStream());
             return;
         }

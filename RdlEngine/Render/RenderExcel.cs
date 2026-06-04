@@ -122,7 +122,7 @@ namespace fyiReporting.RDL
                 EnsureSheet("Sheet1");
 
             // XLSX serialization — opaque, no per-step progress available
-            ExportProgress.BeginIndeterminate("Сохранение XLSX...");
+            ExportProgress.BeginIndeterminate("Saving XLSX...");
             _workbook.SaveAs(_sg.GetStream());
 
             if (_g != null)
@@ -183,20 +183,9 @@ namespace fyiReporting.RDL
                 EnsureSheet("Sheet1");
 
             var cell = _worksheet.Cell(row + 1, col + 1);
-            ExcelValueConverter.SetCellValue(ref cell, typedValue, val);
+            ExcelValueConverter.SetCellValue(cell, typedValue, val);
 
-            if (si != null)
-            {
-                if (_styleCache.TryGetValue(si, out IXLStyle cached))
-                {
-                    cell.Style = cached;
-                }
-                else
-                {
-                    ExcelCellStyle.ApplyStyle(cell, si);
-                    _styleCache[si] = cell.Style;
-                }
-            }
+            ExcelCellStyle.ApplyCachedStyle(cell, si, _styleCache);
         }
 
         private void SetColumnWidth(int col, float pointsWidth)

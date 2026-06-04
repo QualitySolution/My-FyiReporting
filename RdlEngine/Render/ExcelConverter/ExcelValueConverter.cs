@@ -13,7 +13,7 @@ namespace RdlEngine.Render.ExcelConverter
         private enum Kind { Text, Number, Decimal, DateTime, Boolean }
 
         // ClosedXML backend
-        public static void SetCellValue(ref IXLCell cell, object typedValue, string formatted)
+        public static void SetCellValue(IXLCell cell, object typedValue, string formatted)
         {
             if (string.IsNullOrEmpty(formatted)) return;
 
@@ -43,7 +43,7 @@ namespace RdlEngine.Render.ExcelConverter
 
         // NPOI backend
         // NPOI has no decimal overload, so decimal is written through double
-        public static void SetCellValue(ref ICell cell, object typedValue, string formatted)
+        public static void SetCellValue(ICell cell, object typedValue, string formatted)
         {
             if (string.IsNullOrEmpty(formatted)) return;
 

@@ -51,6 +51,8 @@ namespace fyiReporting.RDL
         List<XSSFCellStyle> styles;
         List<XSSFFont> fonts;
 
+        readonly Func<StyleInfo, XSSFCellStyle> _buildXssfStyle;
+
         public RenderExcel2007ViaNPOI(Report rep, IStreamGen sg)
         {
             report = rep;
@@ -59,6 +61,7 @@ namespace fyiReporting.RDL
             excelBuilder.Report = report;
             styles = new List<XSSFCellStyle>();
             fonts = new List<XSSFFont>();
+            _buildXssfStyle = BuildXssfStyle;
             worksheet = (XSSFSheet)workbook.CreateSheet(string.IsNullOrEmpty(rep.Name) ? "NewSheet" : rep.Name);
             var ps = (XSSFPrintSetup)worksheet.PrintSetup;
             ps.SetPaperSize(PaperSize.A4);
@@ -123,7 +126,7 @@ namespace fyiReporting.RDL
             var styleCache = new Dictionary<StyleInfo, XSSFCellStyle>(StyleInfoValueComparer.Instance);
 
             int rowsToWrite = System.Math.Max(0, excelBuilder.Rows.Count - 1);
-            ExportProgress.BeginPhase("Запись данных в Excel", rowsToWrite);
+            ExportProgress.BeginPhase("Write in Excel", rowsToWrite);
 
             for (int i = 0; i < excelBuilder.Rows.Count - 1; i++)
             {
@@ -137,39 +140,12 @@ namespace fyiReporting.RDL
                     var builderCell = builderRow.Cells[j];
                     if (!columnIndexMap.TryGetValue(builderCell.Column, out int columnIndex)) 
                         continue;
-                    ICell cell = (XSSFCell)row.CreateCell(columnIndex);
+                    XSSFCell cell = (XSSFCell)row.CreateCell(columnIndex);
 
                     if (builderCell.ReportItem != null)
                     {
-                        XSSFCellStyle xssfStyle;
-                        if (!styleCache.TryGetValue(builderCell.Style, out xssfStyle))
-                        {
-                            // First time we see this style value — build it once.
-                            var style = new ExcelCellStyle(builderCell.Style);
-                            xssfStyle = (XSSFCellStyle)workbook.CreateCellStyle();
-                            style.SetToStyle(xssfStyle);
-
-                            XSSFFont font = null;
-                            for (short f = 0; f < workbook.NumberOfFonts; f++)
-                            {
-                                XSSFFont innerfont = (XSSFFont)workbook.GetFontAt(f);
-                                if (style.CompareWithXSSFFont(innerfont))
-                                {
-                                    font = innerfont;
-                                    break;
-                                }
-                            }
-                            if (font == null)
-                            {
-                                font = (XSSFFont)workbook.CreateFont();
-                                style.SetToFont(font);
-                            }
-                            font.FontHeightInPoints -= 1;
-                            xssfStyle.SetFont(font);
-                            xssfStyle.WrapText = true;
-
-                            styleCache[builderCell.Style] = xssfStyle;
-                        }
+                        XSSFCellStyle xssfStyle =
+                            ExcelCellStyle.GetOrBuildStyle(styleCache, builderCell.Style, _buildXssfStyle);
 
                         var rightAttach = excelBuilder.GetRightAttachCells(builderCell);
                         var bottomAttach = excelBuilder.GetBottomAttachCells(builderCell);
@@ -195,7 +171,7 @@ namespace fyiReporting.RDL
 
                         cell.CellStyle = xssfStyle;
 
-                        ExcelValueConverter.SetCellValue(ref cell, builderCell.TypedValue, builderCell.Value);
+                        ExcelValueConverter.SetCellValue(cell, builderCell.TypedValue, builderCell.Value);
                     }
                 }
             }
@@ -232,7 +208,7 @@ namespace fyiReporting.RDL
                 //lineShape.GetCTShape().spPr.xfrm.flipV = line.FlipV;
             }
 
-            ExportProgress.BeginIndeterminate("Сохранение XLSX...");
+            ExportProgress.BeginIndeterminate("Saving XLSX...");
             workbook.Write(_sg.GetStream());
             return;
         }
@@ -262,6 +238,34 @@ namespace fyiReporting.RDL
                                         (int)dx2, (int)dy2,
                                         col1Index, row1Index,
                                         col2Index, row2Index);
+        }
+
+        private XSSFCellStyle BuildXssfStyle(StyleInfo si)
+        {
+            var style = new ExcelCellStyle(si);
+            var xssfStyle = (XSSFCellStyle)workbook.CreateCellStyle();
+            style.SetToStyle(xssfStyle);
+
+            XSSFFont font = null;
+            for (short f = 0; f < workbook.NumberOfFonts; f++)
+            {
+                XSSFFont innerfont = (XSSFFont)workbook.GetFontAt(f);
+                if (style.CompareWithXSSFFont(innerfont))
+                {
+                    font = innerfont;
+                    break;
+                }
+            }
+            if (font == null)
+            {
+                font = (XSSFFont)workbook.CreateFont();
+                style.SetToFont(font);
+            }
+            font.FontHeightInPoints -= 1;
+            xssfStyle.SetFont(font);
+            xssfStyle.WrapText = true;
+
+            return xssfStyle;
         }
 
 

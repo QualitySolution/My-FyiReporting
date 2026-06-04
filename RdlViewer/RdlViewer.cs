@@ -897,6 +897,16 @@ namespace fyiReporting.RdlViewer
             {
                 var ld = GetParameters();        // split parms into dictionary
                 _Report.RunGetData(ld);                     // obtain the data (again)
+#if DEBUG
+                if (_Report.ErrorMaxSeverity > 0 && _Report.ErrorItems != null)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        "[Export] Data preparation reported errors (max severity " +
+                        _Report.ErrorMaxSeverity + "):");
+                    foreach (string err in _Report.ErrorItems)
+                        System.Diagnostics.Debug.WriteLine("[Export]   " + err);
+                }
+#endif
             }
             try
             {

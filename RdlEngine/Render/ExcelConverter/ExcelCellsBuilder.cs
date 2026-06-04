@@ -19,7 +19,10 @@ namespace RdlEngine.Render.ExcelConverter
 		public List<ExcelLine> Lines { get; private set; }
 		public List<ExcelTable> Tables { get; private set; }
 
+		// Subset of Cells with ExcelTable == null
 		private readonly List<ExcelCell> _nonTableCells = new List<ExcelCell>();
+
+		// Cache of row independent StyleInfo per ReportItem
 		private readonly Dictionary<ReportItem, StyleInfo> _constantStyleCache =
 			new Dictionary<ReportItem, StyleInfo>();
 
@@ -131,6 +134,7 @@ namespace RdlEngine.Render.ExcelConverter
 				}
 				string value = (cellTextBox as Textbox).RunText(Report, row);
 				ExcelCell currentCell = new ExcelCell(cellTextBox, value, currentRow, currentColumn);
+				currentCell.TypedValue = (cellTextBox as Textbox).Evaluate(Report, row);
 				currentCell.ExcelTable = CurrentExcelTable;
 				currentCell.OriginalWidth = column.Width.Points;
 				currentCell.OriginalHeight = rowHeight;
@@ -193,6 +197,7 @@ namespace RdlEngine.Render.ExcelConverter
 			var currentColumn = AddColumn(leftPosition, width);
 
 			ExcelCell currentCell = new ExcelCell(reportItem, value, currentRow, currentColumn);
+			currentCell.TypedValue = reportItem.Evaluate(Report, row);
 			currentCell.OriginalBottomPosition = OriginalBottomPosition;
 			SetCellStyle(currentCell, reportItem, row);
 			AddCell(currentCell);
@@ -205,11 +210,13 @@ namespace RdlEngine.Render.ExcelConverter
 			StyleInfo si = null;
 			if(reportItem.Style != null) {
 				if(reportItem.Style.ConstantStyle) {
+					// Row independent style
 					if(!_constantStyleCache.TryGetValue(reportItem, out si)) {
 						si = reportItem.Style.GetStyleInfo(Report, row);
 						_constantStyleCache[reportItem] = si;
 					}
 				} else {
+					// Style depends on the row
 					si = reportItem.Style.GetStyleInfo(Report, row);
 				}
 			}
@@ -221,6 +228,7 @@ namespace RdlEngine.Render.ExcelConverter
 
 		public float GetCellAboveRelativePosition(float top)
 		{
+			// Find the cell above top with the largest GrowedBottomPosition
 			ExcelCell aboveCell = null;
 			float bestGrowed = float.NegativeInfinity;
 			for(int idx = 0; idx < Cells.Count; idx++) {
@@ -579,6 +587,7 @@ namespace RdlEngine.Render.ExcelConverter
 				Columns.Remove(newStartColumn);
 			}
 			var newCell = new ExcelCell(cell.ReportItem, cell.Value, cell.Row, newStartColumn);
+			newCell.TypedValue = cell.TypedValue;
 			ExcelCell existCell = newStartColumn.Cells.FirstOrDefault(x => x.Row == cell.Row);
 			if(existCell != null) {
 				ResolveIntersectionConflict(cell, existCell);
@@ -654,12 +663,13 @@ namespace RdlEngine.Render.ExcelConverter
 
 		public void CellsCorrection()
 		{
+			// We only resolve conflicts between nontable cells, table cells are skipped
 			for (int i = 0; i < _nonTableCells.Count; i++)
 			{
 				var count = _nonTableCells.Count;
 				var cell = _nonTableCells[i];
 
-				var unresolvedCells = new List<ExcelCell>();
+				var unresolvedCells = new Stack<ExcelCell>();
 				float cellTop = cell.Row.YPosition;
 				float cellBottom = cell.OriginalHeight + cellTop;
 				float cellLeft = cell.Column.XPosition;
@@ -675,19 +685,17 @@ namespace RdlEngine.Render.ExcelConverter
 
 					if (!(xBottom < cellTop || cellBottom < xTop || xRight < cellLeft || cellRight < xLeft))
 					{
-						unresolvedCells.Add(x);
+						unresolvedCells.Push(x);
 					}
 				}
 
 				while (unresolvedCells.Count > 0)
 				{
-					int lastIdx = unresolvedCells.Count - 1;
-					var uc = unresolvedCells[lastIdx];
+					var uc = unresolvedCells.Pop();
 					if (uc != cell)
 					{
 						ResolveIntersectionConflict(cell, uc);
 					}
-					unresolvedCells.RemoveAt(lastIdx);
 				}
 
 				var dCount = i - (count - _nonTableCells.Count);

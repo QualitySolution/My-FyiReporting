@@ -138,13 +138,12 @@ namespace fyiReporting.RDL
                     var cell = worksheet.Cell(rowIndex, exelColumnIndex);
                     if (builderCell.ReportItem != null)
                     {
-                        SetValue(cell, builderCell.Value);
+                        ExcelValueConverter.SetCellValue(ref cell, builderCell.TypedValue, builderCell.Value);
 
                         if (builderCell.Style != null)
                         {
                             if (styleCache.TryGetValue(builderCell.Style, out IXLStyle cachedStyle))
                             {
-                                // Fast path: assign the cached style key directly.
                                 cell.Style = cachedStyle;
                             }
                             else
@@ -245,41 +244,6 @@ namespace fyiReporting.RDL
             workbook.SaveAs(_sg.GetStream());
             return;
         }
-        private void SetValue(IXLCell cell, string value)
-        {
-            if (string.IsNullOrEmpty(value)) return;
-
-            char first = value[0];
-            bool looksNumeric = first == '-' || first == '+' || first == '.' || (first >= '0' && first <= '9');
-
-            if (looksNumeric && first == '0' && value.Length > 1 && double.TryParse(value, out _))
-            {
-                cell.Value = value;
-            }
-            else if (looksNumeric && double.TryParse(value, out double dVal))
-            {
-                cell.Value = dVal;
-            }
-            else if (looksNumeric && !ContainsLetter(value) && DateTime.TryParse(value, out DateTime dtVal))
-            {
-                cell.Value = dtVal;
-            }
-            else
-            {
-                cell.Value = value;
-            }
-        }
-
-        private static bool ContainsLetter(string value)
-        {
-            for (int i = 0; i < value.Length; i++)
-            {
-                if (char.IsLetter(value[i])) return true;
-            }
-            return false;
-        }
-
-
         // Body: main container for the report
         public void BodyStart(Body b)
         {

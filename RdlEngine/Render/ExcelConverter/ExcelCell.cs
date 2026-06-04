@@ -17,6 +17,7 @@ namespace RdlEngine.Render.ExcelConverter
 		public ReportItem ReportItem { get; set; }
 		public ExcelTable ExcelTable { get; set; }
 		public string Value { get; set; }
+		public object TypedValue { get; set; }
 		public ExcelRow Row { get; private set; }
 		public ExcelColumn Column { get; private set; }
 

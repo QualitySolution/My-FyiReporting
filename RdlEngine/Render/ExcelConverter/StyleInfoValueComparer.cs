@@ -1,21 +1,12 @@
-/* ====================================================================
-   Copyright (C) 2004-2008  fyiReporting Software, LLC
-   Copyright (C) 2011  Peter Gill <peter@majorsilence.com>
-
-   This file is part of the fyiReporting RDL project.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-*/
 using System.Collections.Generic;
 using fyiReporting.RDL;
 
 namespace RdlEngine.Render.ExcelConverter
 {
-    internal sealed class StyleInfoValueComparer : IEqualityComparer<StyleInfo>
+    /// <summary>
+    /// Valuebased equality for <see cref="StyleInfo"/>
+    /// </summary>
+    public class StyleInfoValueComparer : IEqualityComparer<StyleInfo>
     {
         public static readonly StyleInfoValueComparer Instance = new StyleInfoValueComparer();
 

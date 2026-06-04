@@ -115,6 +115,7 @@ namespace fyiReporting.RDL
                 row.HeightInPoints = (excelBuilder.Rows[i + 1].YPosition - builderRow.YPosition);
             }
 
+            // Precompute column index map once — O(1) lookup
             var columnIndexMap = new Dictionary<ExcelColumn, int>(excelBuilder.Columns.Count);
             for (int c = 0; c < excelBuilder.Columns.Count; c++)
                 columnIndexMap[excelBuilder.Columns[c]] = c;
@@ -129,19 +130,21 @@ namespace fyiReporting.RDL
                 ExportProgress.Increment();
                 var builderRow = excelBuilder.Rows[i];
                 XSSFRow row = (XSSFRow)worksheet.GetRow(i);
-                int rowIndex = i;   // builderCell.Row == Rows[i] by construction
+                int rowIndex = i;
 
                 for (int j = 0; j < builderRow.Cells.Count; j++)
                 {
                     var builderCell = builderRow.Cells[j];
-                    if (!columnIndexMap.TryGetValue(builderCell.Column, out int columnIndex)) continue;
-                    XSSFCell cell = (XSSFCell)row.CreateCell(columnIndex);
+                    if (!columnIndexMap.TryGetValue(builderCell.Column, out int columnIndex)) 
+                        continue;
+                    ICell cell = (XSSFCell)row.CreateCell(columnIndex);
 
                     if (builderCell.ReportItem != null)
                     {
                         XSSFCellStyle xssfStyle;
                         if (!styleCache.TryGetValue(builderCell.Style, out xssfStyle))
                         {
+                            // First time we see this style value — build it once.
                             var style = new ExcelCellStyle(builderCell.Style);
                             xssfStyle = (XSSFCellStyle)workbook.CreateCellStyle();
                             style.SetToStyle(xssfStyle);
@@ -192,7 +195,7 @@ namespace fyiReporting.RDL
 
                         cell.CellStyle = xssfStyle;
 
-                        cell.SetCellValue(builderCell.Value);
+                        ExcelValueConverter.SetCellValue(ref cell, builderCell.TypedValue, builderCell.Value);
                     }
                 }
             }

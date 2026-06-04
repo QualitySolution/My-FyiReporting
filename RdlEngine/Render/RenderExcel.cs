@@ -40,7 +40,7 @@ namespace fyiReporting.RDL
         Bitmap _bm = null;              // bm and
         Graphics _g = null;             //         g are needed when calculating string heights
 
-        // Excel position trackers (0-based, like the previous ExcelValet API)
+        // Excel position trackers
         int _ExcelRow = -1;
         int _ExcelCol = -1;
 
@@ -48,7 +48,6 @@ namespace fyiReporting.RDL
         IXLWorksheet _worksheet;
         string SheetName;               // current sheet name
 
-        // Match the conversion used by RenderExcel2007ViaCloesedXML
         const double WidthPointsToSymbols = 5.637142013;
         const double RowHeightMaxPoints = 409;
         const double ColumnWidthMaxSymbols = 255;
@@ -178,13 +177,13 @@ namespace fyiReporting.RDL
             return clean;
         }
 
-        private void SetCell(int row, int col, string val, StyleInfo si)
+        private void SetCell(int row, int col, string val, object typedValue, StyleInfo si)
         {
             if (_worksheet == null)
                 EnsureSheet("Sheet1");
 
             var cell = _worksheet.Cell(row + 1, col + 1);
-            SetValue(cell, val);
+            ExcelValueConverter.SetCellValue(ref cell, typedValue, val);
 
             if (si != null)
             {
@@ -223,42 +222,6 @@ namespace fyiReporting.RDL
             _worksheet.Range(firstRow + 1, firstCol + 1, lastRow + 1, lastCol + 1).Merge();
         }
 
-        // Mirror of RenderExcel2007ViaCloesedXML.SetValue — number/date detection
-        private static void SetValue(IXLCell cell, string value)
-        {
-            if (string.IsNullOrEmpty(value)) return;
-
-            if (value.Length > 1 && value[0] == '0' && double.TryParse(value, out _))
-            {
-                // preserve leading zero — store as text
-                cell.Value = value;
-            }
-            else if (double.TryParse(value, out double dVal))
-            {
-                cell.Value = dVal;
-            }
-            else if (DateTime.TryParse(value, out DateTime dtVal))
-            {
-                bool hasLetters = false;
-                for (int i = 0; i < value.Length; i++)
-                {
-                    if (char.IsLetter(value[i]))
-                    {
-                        hasLetters = true;
-                        break;
-                    }
-                }
-                if (hasLetters)
-                    cell.Value = value;
-                else
-                    cell.Value = dtVal;
-            }
-            else
-            {
-                cell.Value = value;
-            }
-        }
-
         //IPresent
 
         public void BodyStart(Body b) { }
@@ -271,11 +234,11 @@ namespace fyiReporting.RDL
         public void Textbox(Textbox tb, string t, Row row)
         {
             if (InTable(tb))
-                SetCell(_ExcelRow, _ExcelCol, t, GetStyle(tb, row));
+                SetCell(_ExcelRow, _ExcelCol, t, tb.Evaluate(r, row), GetStyle(tb, row));
             else if (InList(tb))
             {
                 _ExcelCol++;
-                SetCell(_ExcelRow, _ExcelCol, t, GetStyle(tb, row));
+                SetCell(_ExcelRow, _ExcelCol, t, tb.Evaluate(r, row), GetStyle(tb, row));
             }
         }
 
@@ -290,14 +253,14 @@ namespace fyiReporting.RDL
         private static bool InTable(ReportItem tb)
         {
             Type tp = tb.Parent.Parent.GetType();
-            return (tp == typeof(TableCell) ||
-                    tp == typeof(Corner) ||
-                    tp == typeof(DynamicColumns) ||
-                    tp == typeof(DynamicRows) ||
-                    tp == typeof(StaticRow) ||
-                    tp == typeof(StaticColumn) ||
-                    tp == typeof(Subtotal) ||
-                    tp == typeof(MatrixCell));
+            return  (tp == typeof(TableCell) ||
+                     tp == typeof(Corner) ||
+                     tp == typeof(DynamicColumns) ||
+                     tp == typeof(DynamicRows) ||
+                     tp == typeof(StaticRow) ||
+                     tp == typeof(StaticColumn) ||
+                     tp == typeof(Subtotal) ||
+                     tp == typeof(MatrixCell));
         }
 
         private static bool InList(ReportItem tb)

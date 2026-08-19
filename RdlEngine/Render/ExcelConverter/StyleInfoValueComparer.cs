@@ -15,7 +15,9 @@ namespace RdlEngine.Render.ExcelConverter
             if (ReferenceEquals(x, y)) return true;
             if (x == null || y == null) return false;
 
-            return x.BackgroundColor.ToArgb() == y.BackgroundColor.ToArgb()
+            return
+                   x._Format == y._Format // по нему строится числовой формат ячейки
+                && x.BackgroundColor.ToArgb() == y.BackgroundColor.ToArgb()
                 && x.Color.ToArgb() == y.Color.ToArgb()
                 && x.FontSize == y.FontSize
                 && x.FontWeight == y.FontWeight
@@ -55,6 +57,7 @@ namespace RdlEngine.Render.ExcelConverter
                 h = h * 31 + (int)obj.VerticalAlign;
                 h = h * 31 + (int)obj.WritingMode;
                 h = h * 31 + (obj.FontFamily?.GetHashCode() ?? 0);
+                h = h * 31 + (obj._Format?.GetHashCode() ?? 0);
                 // Borders combined into one slot — usually identical across cells of same column
                 h = h * 31 + (((int)obj.BStyleLeft << 24) ^ ((int)obj.BStyleRight << 16)
                               ^ ((int)obj.BStyleTop << 8) ^ (int)obj.BStyleBottom);

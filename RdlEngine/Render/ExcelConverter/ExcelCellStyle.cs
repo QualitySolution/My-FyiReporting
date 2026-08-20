@@ -578,6 +578,34 @@ namespace RdlEngine.Render.ExcelConverter
             }
 
             ApplyBorders(xlStyle, styleInfo);
+            ApplyNumberFormat(xlStyle, styleInfo);
+        }
+
+        private static void ApplyNumberFormat(IXLStyle style, StyleInfo styleInfo)
+        {
+            int builtinId;
+            string customCode;
+            if (!ExcelFormatConverter.TryConvert(styleInfo._Format, out builtinId, out customCode))
+                return;
+
+            if (!string.IsNullOrEmpty(customCode))
+                style.NumberFormat.Format = customCode;
+            else
+                style.NumberFormat.NumberFormatId = builtinId;
+        }
+
+        public static void ApplyNumberFormat(XSSFCellStyle style, IDataFormat dataFormat, StyleInfo styleInfo)
+        {
+            if (styleInfo == null) return;
+
+            int builtinId;
+            string customCode;
+            if (!ExcelFormatConverter.TryConvert(styleInfo._Format, out builtinId, out customCode))
+                return;
+
+            style.DataFormat = customCode != null
+                ? dataFormat.GetFormat(customCode)
+                : (short)builtinId;
         }
 
         public static void ApplyCachedStyle(IXLCell cell, StyleInfo styleInfo, IDictionary<StyleInfo, IXLStyle> cache)

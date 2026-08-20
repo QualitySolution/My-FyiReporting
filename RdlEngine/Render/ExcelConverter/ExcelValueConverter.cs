@@ -12,6 +12,8 @@ namespace RdlEngine.Render.ExcelConverter
     {
         private enum Kind { Text, Number, Decimal, DateTime, Boolean }
 
+        private const int MinExcelYear = 1900;
+
         // ClosedXML backend
         public static void SetCellValue(IXLCell cell, object typedValue, string formatted)
         {
@@ -30,8 +32,12 @@ namespace RdlEngine.Render.ExcelConverter
                     cell.Value = Convert.ToDecimal(typedValue, CultureInfo.InvariantCulture);
                     break;
                 case Kind.DateTime:
-                    cell.Value = (DateTime)typedValue;
+                {
+                    DateTime date = (DateTime)typedValue;
+                    if (IsExcelDate(date)) cell.Value = date;
+                    else cell.Value = formatted;
                     break;
+                }
                 case Kind.Boolean:
                     cell.Value = (bool)typedValue;
                     break;
@@ -58,8 +64,12 @@ namespace RdlEngine.Render.ExcelConverter
                     break;
                 }
                 case Kind.DateTime:
-                    cell.SetCellValue((DateTime)typedValue);
+                {
+                    DateTime date = (DateTime)typedValue;
+                    if (IsExcelDate(date)) cell.SetCellValue(date);
+                    else cell.SetCellValue(formatted);
                     break;
+                }
                 case Kind.Boolean:
                     cell.SetCellValue((bool)typedValue);
                     break;
@@ -67,6 +77,11 @@ namespace RdlEngine.Render.ExcelConverter
                     cell.SetCellValue(formatted);
                     break;
             }
+        }
+
+        private static bool IsExcelDate(DateTime value)
+        {
+            return value.Year >= MinExcelYear;
         }
 
         private static Kind Classify(object value)

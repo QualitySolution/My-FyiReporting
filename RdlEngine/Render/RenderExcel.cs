@@ -142,13 +142,13 @@ namespace fyiReporting.RDL
 
         private IXLWorksheet EnsureSheet(string name)
         {
-            string safe = SanitizeSheetName(name);
+            string safe = ExcelSheetName.Sanitize(name, "Sheet");
             string candidate = safe;
             int n = 1;
             while (_usedSheetNames.Contains(candidate))
             {
                 string suffix = "_" + (++n);
-                int maxBase = 31 - suffix.Length;
+                int maxBase = ExcelSheetName.MaxLength - suffix.Length;
                 string baseName = safe.Length > maxBase ? safe.Substring(0, maxBase) : safe;
                 candidate = baseName + suffix;
             }
@@ -156,25 +156,6 @@ namespace fyiReporting.RDL
             _worksheet = _workbook.Worksheets.Add(candidate);
             SheetName = candidate;
             return _worksheet;
-        }
-
-        private static string SanitizeSheetName(string name)
-        {
-            if (string.IsNullOrEmpty(name))
-                return "Sheet";
-
-            // запрещены: \ / ? * [ ] :
-            char[] chars = name.ToCharArray();
-            for (int i = 0; i < chars.Length; i++)
-            {
-                char c = chars[i];
-                if (c == '\\' || c == '/' || c == '?' || c == '*' || c == '[' || c == ']' || c == ':')
-                    chars[i] = '_';
-            }
-            string clean = new string(chars).Trim('\'', ' ');
-            if (clean.Length == 0) clean = "Sheet";
-            if (clean.Length > 31) clean = clean.Substring(0, 31);
-            return clean;
         }
 
         private void SetCell(int row, int col, string val, object typedValue, StyleInfo si)
@@ -185,7 +166,7 @@ namespace fyiReporting.RDL
             var cell = _worksheet.Cell(row + 1, col + 1);
             ExcelValueConverter.SetCellValue(cell, typedValue, val);
 
-            ExcelCellStyle.ApplyCachedStyle(cell, si, _styleCache);
+            ExcelCellStyle.ApplyCachedStyle(cell, ExcelFormatConverter.WithDefaultDateFormat(si, typedValue), _styleCache);
         }
 
         private void SetColumnWidth(int col, float pointsWidth)

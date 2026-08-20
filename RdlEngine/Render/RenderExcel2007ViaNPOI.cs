@@ -62,7 +62,7 @@ namespace fyiReporting.RDL
             styles = new List<XSSFCellStyle>();
             fonts = new List<XSSFFont>();
             _buildXssfStyle = BuildXssfStyle;
-            worksheet = (XSSFSheet)workbook.CreateSheet(string.IsNullOrEmpty(rep.Name) ? "NewSheet" : rep.Name);
+            worksheet = (XSSFSheet)workbook.CreateSheet(ExcelSheetName.Sanitize(rep.Name, "NewSheet"));
             var ps = (XSSFPrintSetup)worksheet.PrintSetup;
             ps.SetPaperSize(PaperSize.A4);
             ps.Orientation = PrintOrientation.LANDSCAPE;

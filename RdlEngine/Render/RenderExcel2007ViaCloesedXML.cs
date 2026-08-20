@@ -50,11 +50,7 @@ namespace fyiReporting.RDL
             excelBuilder.Report = report;
 
             workbook = new XLWorkbook();
-            string sheetName = string.IsNullOrEmpty(rep.Name) ? "Report" : rep.Name;
-            // Excel sheet name length limit
-            if (sheetName.Length > 31) sheetName = sheetName.Substring(0, 31);
-
-            worksheet = workbook.Worksheets.Add(sheetName);
+            worksheet = workbook.Worksheets.Add(ExcelSheetName.Sanitize(rep.Name, "Report"));
 
             var pageSetup = worksheet.PageSetup;
             pageSetup.PaperSize = XLPaperSize.A4Paper;

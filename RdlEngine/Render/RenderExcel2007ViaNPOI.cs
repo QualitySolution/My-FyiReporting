@@ -52,6 +52,7 @@ namespace fyiReporting.RDL
         List<XSSFFont> fonts;
 
         readonly Func<StyleInfo, XSSFCellStyle> _buildXssfStyle;
+        readonly IDataFormat _dataFormat;
 
         public RenderExcel2007ViaNPOI(Report rep, IStreamGen sg)
         {
@@ -62,6 +63,7 @@ namespace fyiReporting.RDL
             styles = new List<XSSFCellStyle>();
             fonts = new List<XSSFFont>();
             _buildXssfStyle = BuildXssfStyle;
+            _dataFormat = workbook.CreateDataFormat();
             worksheet = (XSSFSheet)workbook.CreateSheet(ExcelSheetName.Sanitize(rep.Name, "NewSheet"));
             var ps = (XSSFPrintSetup)worksheet.PrintSetup;
             ps.SetPaperSize(PaperSize.A4);
@@ -144,8 +146,9 @@ namespace fyiReporting.RDL
 
                     if (builderCell.ReportItem != null)
                     {
+                        var cellStyle = ExcelFormatConverter.WithDefaultDateFormat(builderCell.Style, builderCell.TypedValue);
                         XSSFCellStyle xssfStyle =
-                            ExcelCellStyle.GetOrBuildStyle(styleCache, builderCell.Style, _buildXssfStyle);
+                            ExcelCellStyle.GetOrBuildStyle(styleCache, cellStyle, _buildXssfStyle);
 
                         var rightAttach = excelBuilder.GetRightAttachCells(builderCell);
                         var bottomAttach = excelBuilder.GetBottomAttachCells(builderCell);
@@ -245,6 +248,7 @@ namespace fyiReporting.RDL
             var style = new ExcelCellStyle(si);
             var xssfStyle = (XSSFCellStyle)workbook.CreateCellStyle();
             style.SetToStyle(xssfStyle);
+            ExcelCellStyle.ApplyNumberFormat(xssfStyle, _dataFormat, si);
 
             XSSFFont font = null;
             for (short f = 0; f < workbook.NumberOfFonts; f++)

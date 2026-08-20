@@ -136,7 +136,8 @@ namespace fyiReporting.RDL
                     {
                         ExcelValueConverter.SetCellValue(cell, builderCell.TypedValue, builderCell.Value);
 
-                        ExcelCellStyle.ApplyCachedStyle(cell, builderCell.Style, styleCache);
+                        var cellStyle = ExcelFormatConverter.WithDefaultDateFormat(builderCell.Style, builderCell.TypedValue);
+                        ExcelCellStyle.ApplyCachedStyle(cell, cellStyle, styleCache);
 
                         var rightAttach = excelBuilder.GetRightAttachCells(builderCell);
                         var bottomAttach = excelBuilder.GetBottomAttachCells(builderCell);

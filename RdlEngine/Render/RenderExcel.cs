@@ -166,7 +166,7 @@ namespace fyiReporting.RDL
             var cell = _worksheet.Cell(row + 1, col + 1);
             ExcelValueConverter.SetCellValue(cell, typedValue, val);
 
-            ExcelCellStyle.ApplyCachedStyle(cell, si, _styleCache);
+            ExcelCellStyle.ApplyCachedStyle(cell, ExcelFormatConverter.WithDefaultDateFormat(si, typedValue), _styleCache);
         }
 
         private void SetColumnWidth(int col, float pointsWidth)

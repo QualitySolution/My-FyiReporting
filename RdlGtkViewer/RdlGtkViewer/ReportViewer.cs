@@ -750,27 +750,24 @@ namespace fyiReporting.RdlGtkViewer
 
         protected void OnPrintActionActivated(object sender, System.EventArgs e)
         {
-            using (PrintContext context = new PrintContext(GdkWindow.Handle))
+            if (customPrintAction == null)
             {
-	            if (customPrintAction == null)
-	            {
-		            printing = new PrintOperation();
-		            printing.Unit = Unit.Points;
-		            printing.UseFullPage = true;
-		            printing.DefaultPageSetup = new PageSetup();
-		            printing.DefaultPageSetup.Orientation = 
-			            report.PageHeightPoints > report.PageWidthPoints ? PageOrientation.Portrait : PageOrientation.Landscape;
+	            printing = new PrintOperation();
+	            printing.Unit = Unit.Points;
+	            printing.UseFullPage = true;
+	            printing.DefaultPageSetup = new PageSetup();
+	            printing.DefaultPageSetup.Orientation =
+		            report.PageHeightPoints > report.PageWidthPoints ? PageOrientation.Portrait : PageOrientation.Landscape;
 
-		            printing.BeginPrint += HandlePrintBeginPrint;
-		            printing.DrawPage += HandlePrintDrawPage;
-		            printing.EndPrint += HandlePrintEndPrint;
+	            printing.BeginPrint += HandlePrintBeginPrint;
+	            printing.DrawPage += HandlePrintDrawPage;
+	            printing.EndPrint += HandlePrintEndPrint;
 
-		            printing.Run(PrintOperationAction.PrintDialog, null);
-	            }
-	            else
-	            {
-		            customPrintAction.Invoke(pages);
-	            }
+	            printing.Run(PrintOperationAction.PrintDialog, null);
+            }
+            else
+            {
+	            customPrintAction.Invoke(pages);
             }
         }
 

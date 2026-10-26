@@ -322,6 +322,7 @@ namespace fyiReporting.RDL
                     byte[] ba = ostrm.ToArray();
                     ostrm.Close();
                     PageImage pi = new PageImage(IMAGEFORMAT, ba, width, height);	// Create an image
+                    pi.Sizing = ImageSizingEnum.Fit;
 
                     RunPageRegionBegin(pgs);
 
